@@ -2,9 +2,20 @@ import { useState, useEffect } from 'react';
 import { courseData } from './data/courseData';
 import {
   Menu, X, ChevronRight, BookOpen, Clock, CheckCircle2,
-  Lightbulb, AlertTriangle, Play, Home, Shield
+  Lightbulb, AlertTriangle, Play, Home, Shield, ImageIcon
 } from 'lucide-react';
 import './index.css';
+
+const chapterInfographics = {
+  1: { src: '/infographics/ch1-what-is-cybersecurity.jpg', alt: 'What is Cybersecurity - CIA Triad & Internet Basics' },
+  2: { src: '/infographics/ch2-passwords-authentication.jpg', alt: 'Passwords & Authentication - Cracking, Rainbow Tables, 2FA' },
+  3: { src: '/infographics/ch3-social-engineering.jpg', alt: 'Social Engineering - Phishing, Vishing, Baiting, Pretexting' },
+  4: { src: '/infographics/ch4-encryption-cryptography.jpg', alt: 'Encryption & Cryptography - Symmetric, Asymmetric, HTTPS, Hashing' },
+  5: { src: '/infographics/ch5-network-security.jpg', alt: 'Network Security - Scanning, Firewalls, IDS/IPS' },
+  6: { src: '/infographics/ch6-web-vulnerabilities.jpg', alt: 'Web Vulnerabilities - SQL Injection, XSS, CSRF' },
+  7: { src: '/infographics/ch7-ethical-hacking-tools.jpg', alt: 'Ethical Hacking Toolkit - Nmap, Metasploit, Burp Suite' },
+  8: { src: '/infographics/ch8-capture-the-flag.jpg', alt: 'Capture The Flag - CTF Categories & Platforms' },
+};
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -258,17 +269,25 @@ function App() {
               <h2 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '24px' }}>Course Chapters</h2>
               {courseData.chapters.map((chapter) => {
                 const done = chapter.lessons.filter(l => completedLessons.includes(l.id)).length;
+                const infographic = chapterInfographics[chapter.id];
                 return (
-                  <div key={chapter.id} className="chapter-card" onClick={() => navigateToLesson(chapter.lessons[0])}>
-                    <div className="chapter-number">{chapter.id}</div>
-                    <div className="chapter-info">
-                      <div className="chapter-title">{chapter.title}</div>
-                      <div className="chapter-meta">
-                        {chapter.description} • {chapter.lessons.length} lessons
-                        {done > 0 && <span style={{ color: 'var(--accent-green)', marginLeft: '8px' }}>({done}/{chapter.lessons.length} complete)</span>}
+                  <div key={chapter.id} className="chapter-card has-infographic" onClick={() => navigateToLesson(chapter.lessons[0])}>
+                    {infographic && (
+                      <div className="chapter-card-thumb">
+                        <img src={`${import.meta.env.BASE_URL}${infographic.src.slice(1)}`} alt={infographic.alt} loading="lazy" />
                       </div>
+                    )}
+                    <div className="chapter-card-body">
+                      <div className="chapter-number">{chapter.id}</div>
+                      <div className="chapter-info">
+                        <div className="chapter-title">{chapter.title}</div>
+                        <div className="chapter-meta">
+                          {chapter.description} • {chapter.lessons.length} lessons
+                          {done > 0 && <span style={{ color: 'var(--accent-green)', marginLeft: '8px' }}>({done}/{chapter.lessons.length} complete)</span>}
+                        </div>
+                      </div>
+                      <ChevronRight size={24} style={{ color: 'var(--text-muted)' }} />
                     </div>
-                    <ChevronRight size={24} style={{ color: 'var(--text-muted)' }} />
                   </div>
                 );
               })}
@@ -304,6 +323,20 @@ function App() {
                 )}
               </div>
             </div>
+
+            {currentLesson.id.endsWith('-1') && chapterInfographics[parseInt(currentLesson.id)] && (
+              <div className="infographic-container">
+                <div className="infographic-badge"><ImageIcon size={14} /><span>Chapter Overview</span></div>
+                <img
+                  src={`${import.meta.env.BASE_URL}${chapterInfographics[parseInt(currentLesson.id)].src.slice(1)}`}
+                  alt={chapterInfographics[parseInt(currentLesson.id)].alt}
+                  className="infographic-image"
+                  loading="lazy"
+                  onClick={(e) => e.target.classList.toggle('expanded')}
+                />
+                <p className="infographic-caption">👆 Tap to expand</p>
+              </div>
+            )}
 
             <div className="lesson-content">{renderContent(currentLesson.content)}</div>
 
