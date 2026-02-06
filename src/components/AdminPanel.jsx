@@ -322,9 +322,10 @@ export default function AdminPanel({ courseData, isOpen, onClose }) {
               key={tab.id}
               className={`admin-tab ${activeTab === tab.id ? 'active' : ''}`}
               onClick={() => setActiveTab(tab.id)}
+              title={tab.label}
             >
               <tab.icon size={18} />
-              <span>{tab.label}</span>
+              <span className="tab-text">{tab.label}</span>
             </button>
           ))}
         </div>

@@ -630,7 +630,7 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.1); }
 
-/* ===== MOBILE RESPONSIVE FIX (Final) ===== */
+/* ===== DEEP MOBILE RESPONSIVE FIX ===== */
 html {
   overflow-x: hidden;
 }
@@ -663,6 +663,13 @@ pre code {
 }
 
 /* Tables scroll horizontally */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  margin: 20px 0;
+}
+
 table {
   display: block;
   overflow-x: auto;
@@ -696,152 +703,519 @@ img, video, iframe, canvas, svg:not(:root) {
   overflow-x: auto;
 }
 
+/* ===== MOBILE HAMBURGER MENU ===== */
+.mobile-menu-btn {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 200;
+  width: 48px;
+  height: 48px;
+  min-height: 44px;
+  min-width: 44px;
+  background: rgba(10, 10, 16, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.mobile-menu-btn:hover,
+.mobile-menu-btn:active {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* ===== SIDEBAR MOBILE ===== */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 99;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-overlay.open {
+  display: block;
+  opacity: 1;
+}
+
+/* ===== TABLET BREAKPOINT (1024px) ===== */
 @media (max-width: 1024px) {
-  .mobile-menu-btn, .hamburger, .menu-toggle {
+  .mobile-menu-btn {
     display: flex !important;
   }
 
   .sidebar {
     position: fixed !important;
+    left: 0;
+    top: 0;
     z-index: 100 !important;
     transform: translateX(-100%);
-    transition: transform 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 280px;
+    box-shadow: 4px 0 40px rgba(0, 0, 0, 0.5);
   }
 
   .sidebar.open {
     transform: translateX(0) !important;
   }
 
-  .sidebar-overlay {
-    display: block !important;
-  }
-
   .main-content {
     margin-left: 0 !important;
     width: 100% !important;
     max-width: 100vw !important;
-    padding: 4.5rem 1.25rem 2rem !important;
+    padding: 72px 20px 32px !important;
+  }
+  
+  .hero {
+    padding: 40px 0 !important;
+    margin-bottom: 32px !important;
+  }
+  
+  .hero-title {
+    font-size: 44px !important;
   }
 }
 
+/* ===== MOBILE LANDSCAPE (768px) ===== */
 @media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
   .main-content {
-    padding: 4rem 1rem 2rem !important;
+    padding: 68px 16px 24px !important;
   }
 
-  .lesson-title, h1 {
-    font-size: 1.5rem !important;
-    line-height: 1.3 !important;
+  /* Hero Section */
+  .hero {
+    padding: 24px 0 32px !important;
+    margin-bottom: 24px !important;
+  }
+  
+  .hero-badge {
+    font-size: 11px !important;
+    padding: 6px 12px !important;
   }
 
-  .lesson-heading, h2 {
-    font-size: 1.25rem !important;
+  .hero-title {
+    font-size: 32px !important;
+    line-height: 1.15 !important;
+    padding: 0 8px;
   }
 
-  h3 {
-    font-size: 1.1rem !important;
-  }
-
-  .lesson-description {
+  .hero-subtitle {
     font-size: 14px !important;
+    line-height: 1.6 !important;
+    padding: 0 12px;
+    margin-bottom: 24px !important;
   }
 
-  .lesson-content, .content, .lesson-text, p, li {
+  /* Lesson Content */
+  .lesson-container {
+    max-width: 100%;
+  }
+
+  .lesson-title, h1.lesson-title {
+    font-size: 24px !important;
+    line-height: 1.25 !important;
+  }
+
+  .lesson-content h2 {
+    font-size: 20px !important;
+    margin: 28px 0 14px !important;
+  }
+
+  .lesson-content h3 {
+    font-size: 17px !important;
+    margin: 24px 0 12px !important;
+  }
+
+  .lesson-content {
     font-size: 15px !important;
     line-height: 1.7 !important;
   }
 
-  pre code, .code-editor pre, .code-content pre, .code-block pre {
-    font-size: 12px !important;
-    line-height: 1.5 !important;
+  .lesson-content p,
+  .lesson-content li {
+    font-size: 15px !important;
+    line-height: 1.7 !important;
   }
 
-  .lesson-nav, .nav-buttons, .navigation {
-    flex-direction: column !important;
-    gap: 0.75rem !important;
+  .lesson-content ul,
+  .lesson-content ol {
+    padding-left: 20px !important;
   }
 
-  .nav-btn, .nav-button {
-    width: 100% !important;
-    justify-content: center !important;
-  }
-
-  .breadcrumb {
+  .lesson-breadcrumb {
     font-size: 12px !important;
     flex-wrap: wrap !important;
+    gap: 6px !important;
   }
 
-  .tip-box, .warning-box, .checkpoint, .info-box, .note-box {
-    padding: 0.875rem !important;
+  .lesson-meta {
+    font-size: 13px !important;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  /* Code Blocks */
+  .code-block {
+    margin: 16px 0 !important;
+    border-radius: 10px !important;
+    max-width: calc(100vw - 32px);
+  }
+
+  .code-header {
+    padding: 10px 14px;
+  }
+
+  .code-content {
+    padding: 14px !important;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .code-content pre {
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  /* Tip/Warning Boxes */
+  .tip-box, .warning-box {
+    padding: 14px 16px !important;
+    margin: 16px 0 !important;
+    border-radius: 10px !important;
     font-size: 14px !important;
   }
 
-  .quiz-container, .quiz-section {
-    padding: 1rem !important;
+  .tip-box-header, .warning-box-header {
+    font-size: 14px;
   }
 
-  .quiz-options .option-btn, .quiz-option {
-    padding: 0.75rem !important;
+  .tip-box p, .warning-box p {
     font-size: 14px !important;
+    line-height: 1.6 !important;
   }
 
-  .chapter-card, .chapter-item, .chapter-header {
-    padding: 0.75rem !important;
-  }
-
-  .hero, .hero-section {
-    padding: 1.5rem 0 !important;
-  }
-
-  .hero-title, .hero h1 {
-    font-size: 1.75rem !important;
-  }
-
-  .hero-subtitle, .hero p, .hero-description {
-    font-size: 14px !important;
-  }
-
+  /* Tables */
   table {
     font-size: 13px !important;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   table th, table td {
-    padding: 0.5rem !important;
+    padding: 10px 12px !important;
+    white-space: nowrap;
   }
 
-  .glass-card, .card {
-    padding: 1rem !important;
+  /* Quiz Section */
+  .quiz-section {
+    padding: 20px !important;
+    margin: 24px 0 !important;
+    border-radius: 14px !important;
+  }
+
+  .quiz-title {
+    font-size: 17px !important;
+  }
+
+  .quiz-option {
+    padding: 14px 16px !important;
+    font-size: 14px !important;
+    min-height: 44px;
+  }
+
+  /* Chapter Cards */
+  .chapter-card {
+    padding: 0 !important;
+    border-radius: 14px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .chapter-card > div:last-child {
+    padding: 14px 16px !important;
+  }
+
+  .chapter-number {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 16px !important;
+    border-radius: 10px !important;
+    flex-shrink: 0;
+  }
+
+  .chapter-title {
+    font-size: 16px !important;
+  }
+
+  .chapter-meta {
+    font-size: 13px !important;
+    line-height: 1.4;
+  }
+
+  /* Navigation Buttons */
+  .lesson-nav {
+    flex-direction: column !important;
+    gap: 12px !important;
+    margin-top: 32px !important;
+    padding-top: 24px !important;
+  }
+
+  .nav-button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 16px 20px !important;
+    font-size: 14px !important;
+    min-height: 48px;
     border-radius: 12px !important;
   }
 
-  .stats-grid, .features-grid {
+  /* Glass Cards */
+  .glass-card {
+    padding: 20px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Progress bar in sidebar */
+  .progress-bar {
+    height: 10px !important;
+  }
+
+  /* What You'll Learn Grid */
+  .glass-card > div[style*="grid"] {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 0.75rem !important;
+    gap: 12px !important;
+  }
+
+  /* Infographic */
+  .infographic-container {
+    margin: 0 0 24px 0 !important;
+    border-radius: 14px !important;
+  }
+
+  .infographic-badge {
+    padding: 10px 14px;
+    font-size: 11px;
+  }
+
+  .infographic-caption {
+    font-size: 12px;
+    padding: 8px;
+  }
+
+  /* Touch targets - ensure 44px minimum */
+  .nav-item {
+    min-height: 44px;
+    padding: 12px 16px !important;
+  }
+
+  button, a, .clickable, [role="button"] {
+    min-height: 44px;
   }
 }
 
+/* ===== MOBILE PORTRAIT (480px) ===== */
 @media (max-width: 480px) {
   .main-content {
-    padding: 3.5rem 0.75rem 1.5rem !important;
+    padding: 64px 12px 20px !important;
   }
 
-  .hero-title, .hero h1 {
-    font-size: 1.5rem !important;
+  .hero {
+    padding: 16px 0 24px !important;
   }
 
-  .lesson-title, h1 {
-    font-size: 1.35rem !important;
+  .hero-title {
+    font-size: 26px !important;
+    padding: 0 4px;
   }
 
-  pre code, .code-editor pre, .code-content pre {
+  .hero-subtitle {
+    font-size: 13px !important;
+    padding: 0 8px;
+  }
+
+  .lesson-title, h1.lesson-title {
+    font-size: 22px !important;
+  }
+
+  .lesson-content h2 {
+    font-size: 18px !important;
+  }
+
+  .lesson-content h3 {
+    font-size: 16px !important;
+  }
+
+  .lesson-content {
+    font-size: 14px !important;
+  }
+
+  .code-content pre {
     font-size: 11px !important;
   }
 
-  .stats-grid, .features-grid {
+  /* What You'll Learn - single column on small phones */
+  .glass-card > div[style*="grid"] {
     grid-template-columns: 1fr !important;
   }
+
+  /* Chapter card thumbnail */
+  .chapter-card > div:first-child {
+    height: 100px !important;
+  }
+
+  .chapter-title {
+    font-size: 15px !important;
+  }
+
+  .chapter-meta {
+    font-size: 12px !important;
+  }
+
+  /* Admin tabs - make them scrollable */
+  .admin-tabs {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 12px !important;
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .admin-tab {
+    flex-shrink: 0;
+    padding: 10px 12px !important;
+    font-size: 11px !important;
+  }
+
+  /* Admin tab icons only on small screens */
+  .admin-tab span.tab-text {
+    display: none !important;
+  }
 }
-/* ===== END MOBILE FIX ===== */
+
+/* ===== SMALL PHONES (360px) ===== */
+@media (max-width: 360px) {
+  .mobile-menu-btn {
+    width: 44px;
+    height: 44px;
+    top: 12px;
+    left: 12px;
+    border-radius: 10px;
+  }
+
+  .main-content {
+    padding: 60px 10px 16px !important;
+  }
+
+  .hero-title {
+    font-size: 24px !important;
+  }
+
+  .hero-subtitle {
+    font-size: 12px !important;
+  }
+
+  .lesson-title, h1.lesson-title {
+    font-size: 20px !important;
+  }
+
+  .code-content pre {
+    font-size: 10px !important;
+  }
+
+  .chapter-number {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 14px !important;
+  }
+
+  .nav-button {
+    padding: 14px 16px !important;
+    font-size: 13px !important;
+  }
+
+  .tip-box, .warning-box {
+    padding: 12px !important;
+  }
+
+  .quiz-option {
+    padding: 12px !important;
+  }
+
+  /* Sidebar narrower on tiny screens */
+  .sidebar {
+    width: 260px !important;
+  }
+
+  .sidebar-header {
+    padding: 0 4px 20px !important;
+  }
+
+  .sidebar-title {
+    font-size: 15px !important;
+  }
+}
+
+/* ===== ENSURE NO HORIZONTAL SCROLL ===== */
+.app-container,
+.main-content,
+.lesson-container,
+.hero,
+.chapter-card,
+.glass-card,
+.quiz-section,
+.tip-box,
+.warning-box,
+.infographic-container {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Code blocks are the exception - they scroll internally */
+.code-block,
+.code-content,
+table {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ===== TOUCH FRIENDLINESS ===== */
+@media (hover: none) and (pointer: coarse) {
+  /* Mobile devices */
+  .nav-item,
+  .nav-button,
+  .quiz-option,
+  .chapter-card,
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Larger touch targets */
+  .quiz-option {
+    min-height: 48px;
+  }
+
+  .nav-item {
+    min-height: 48px;
+  }
+}
+/* ===== END DEEP MOBILE FIX ===== */
 
 /* ===== INFOGRAPHICS ===== */
 .infographic-container {
@@ -2278,12 +2652,37 @@ img, video, iframe, canvas, svg:not(:root) {
   opacity: 1;
 }
 
-/* Mobile Responsive */
+/* ===== ADMIN PANEL MOBILE RESPONSIVE ===== */
+
+/* Tablet (1024px) */
+@media (max-width: 1024px) {
+  .admin-overlay {
+    padding: 0;
+  }
+  
+  .admin-container {
+    height: 100vh;
+    height: 100dvh;
+  }
+}
+
+/* Mobile (768px) */
 @media (max-width: 768px) {
   .admin-login-card {
     margin: 16px;
-    padding: 32px 24px;
+    padding: 28px 20px;
     max-width: calc(100% - 32px);
+    border-radius: 20px;
+  }
+  
+  .admin-login-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+  }
+  
+  .admin-login-header h2 {
+    font-size: 24px;
   }
 
   .admin-header {
@@ -2292,20 +2691,47 @@ img, video, iframe, canvas, svg:not(:root) {
 
   .admin-header-title {
     font-size: 16px;
+    gap: 8px;
+  }
+  
+  .admin-close-btn {
+    width: 36px;
+    height: 36px;
   }
 
+  /* SCROLLABLE TABS - Critical for mobile */
   .admin-tabs {
     padding: 8px 12px;
-    gap: 2px;
+    gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .admin-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .admin-tab {
-    padding: 10px 14px;
+    padding: 10px 12px;
     font-size: 12px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
 
-  .admin-tab span {
-    display: none;
+  /* Show icons + abbreviated text on tablet */
+  .admin-tab svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .admin-tab .tab-text {
+    display: inline;
   }
 
   .admin-content {
@@ -2315,8 +2741,10 @@ img, video, iframe, canvas, svg:not(:root) {
   .admin-section-title {
     font-size: 18px;
     margin-bottom: 16px;
+    flex-wrap: wrap;
   }
 
+  /* Stats Grid */
   .admin-stats-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
@@ -2326,7 +2754,7 @@ img, video, iframe, canvas, svg:not(:root) {
     padding: 16px;
     flex-direction: column;
     text-align: center;
-    gap: 12px;
+    gap: 10px;
   }
 
   .admin-stat-value {
@@ -2336,45 +2764,82 @@ img, video, iframe, canvas, svg:not(:root) {
   .admin-stat-icon {
     width: 44px;
     height: 44px;
+    border-radius: 12px;
+  }
+  
+  .admin-stat-label {
+    font-size: 12px;
   }
 
   .admin-progress-fill-large span {
     font-size: 11px;
   }
+  
+  .admin-progress-bar-large {
+    height: 32px;
+  }
 
+  /* Quick Stats */
   .admin-quick-stats {
     flex-direction: column;
   }
 
   .admin-quick-stat {
     width: 100%;
+    padding: 10px 14px;
+  }
+
+  /* Tree View */
+  .admin-tree-chapter-header {
+    padding: 14px 16px;
+  }
+  
+  .admin-tree-chapter-title {
+    font-size: 14px;
   }
 
   .admin-tree-lesson {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-    padding: 12px 16px 12px 40px;
+    padding: 12px 16px 12px 36px;
   }
 
   .admin-tree-lesson-meta {
     flex-wrap: wrap;
+    gap: 8px;
   }
-
-  .admin-progress-circle {
-    width: 150px;
-    height: 150px;
-  }
-
-  .admin-progress-circle-text .percent {
-    font-size: 28px;
-  }
-
-  .admin-action-btn {
-    padding: 12px 16px;
+  
+  .admin-tree-lesson-title {
     font-size: 13px;
   }
 
+  /* Progress Circle */
+  .admin-progress-circle {
+    width: 140px;
+    height: 140px;
+  }
+
+  .admin-progress-circle-text .percent {
+    font-size: 26px;
+  }
+  
+  .admin-progress-circle-text .label {
+    font-size: 12px;
+  }
+
+  /* Action Buttons */
+  .admin-progress-actions {
+    flex-direction: column;
+  }
+
+  .admin-action-btn {
+    padding: 14px 16px;
+    font-size: 13px;
+    width: 100%;
+  }
+
+  /* Analytics */
   .admin-analytics-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
@@ -2387,48 +2852,73 @@ img, video, iframe, canvas, svg:not(:root) {
   .admin-analytics-card-value {
     font-size: 24px;
   }
+  
+  .admin-analytics-card-header {
+    font-size: 12px;
+  }
 
+  /* Editor/Preview */
   .admin-view-toggle {
     flex-wrap: wrap;
+    gap: 8px;
   }
 
   .toggle-btn,
   .copy-btn {
     flex: 1;
+    min-width: 80px;
+    padding: 10px 14px;
+    font-size: 12px;
   }
 
   .admin-lesson-meta {
     flex-direction: column;
     gap: 8px;
+    padding: 14px 16px;
+  }
+  
+  .admin-lesson-selector select {
+    padding: 12px 14px;
+    font-size: 13px;
   }
 
   .admin-preview-container {
-    padding: 20px;
+    padding: 16px;
     max-height: 50vh;
   }
+  
+  .admin-raw-content {
+    font-size: 11px;
+  }
 
+  /* Structure Visualizer */
   .admin-structure-map {
     padding: 16px;
   }
 
   .admin-structure-chapter-node {
-    padding: 14px 18px;
+    padding: 14px 16px;
     gap: 12px;
   }
 
   .chapter-badge {
-    width: 40px;
-    height: 40px;
-    font-size: 16px;
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    border-radius: 10px;
   }
 
   .chapter-info .chapter-title {
     font-size: 14px;
   }
+  
+  .chapter-info .chapter-desc {
+    font-size: 12px;
+  }
 
   .admin-structure-lessons {
-    margin-left: 16px;
-    padding-left: 16px;
+    margin-left: 12px;
+    padding-left: 12px;
   }
 
   .lesson-card {
@@ -2438,7 +2928,17 @@ img, video, iframe, canvas, svg:not(:root) {
   .lesson-info .lesson-title {
     font-size: 13px;
   }
+  
+  .lesson-info .lesson-duration {
+    font-size: 11px;
+  }
+  
+  .lesson-status, .lesson-number {
+    width: 24px;
+    height: 24px;
+  }
 
+  /* Admin Trigger */
   .admin-trigger {
     bottom: 16px;
     right: 16px;
@@ -2446,9 +2946,73 @@ img, video, iframe, canvas, svg:not(:root) {
     height: 48px;
     border-radius: 12px;
   }
+  
+  /* Quality Breakdown */
+  .admin-quality-breakdown {
+    padding: 16px;
+  }
+  
+  .admin-quality-breakdown h4 {
+    font-size: 15px;
+  }
+  
+  /* Chapter Progress */
+  .admin-chapter-progress {
+    padding: 16px;
+  }
+  
+  .admin-chapter-progress h4 {
+    font-size: 15px;
+  }
+  
+  /* Completed Lessons */
+  .admin-completed-lessons {
+    padding: 16px;
+  }
+  
+  .admin-completed-item {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  /* Table */
+  .admin-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .admin-table-container table {
+    min-width: 500px;
+  }
+  
+  .admin-table-container th,
+  .admin-table-container td {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
 }
 
+/* Mobile Portrait (480px) */
 @media (max-width: 480px) {
+  .admin-login-card {
+    margin: 12px;
+    padding: 24px 16px;
+  }
+  
+  .admin-login-header h2 {
+    font-size: 22px;
+  }
+  
+  .admin-password-input {
+    padding: 14px 16px;
+    font-size: 14px;
+  }
+  
+  .admin-login-btn {
+    padding: 14px 20px;
+    font-size: 14px;
+  }
+
   .admin-stats-grid {
     grid-template-columns: 1fr;
   }
@@ -2456,6 +3020,12 @@ img, video, iframe, canvas, svg:not(:root) {
   .admin-stat-card {
     flex-direction: row;
     text-align: left;
+    gap: 14px;
+  }
+  
+  .admin-stat-icon {
+    width: 48px;
+    height: 48px;
   }
 
   .admin-analytics-grid {
@@ -2464,7 +3034,88 @@ img, video, iframe, canvas, svg:not(:root) {
 
   .admin-structure-legend {
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  
+  .legend-item {
+    font-size: 12px;
+  }
+  
+  /* Tabs - icons only on small phones */
+  .admin-tabs {
+    padding: 6px 10px;
+    gap: 2px;
+  }
+  
+  .admin-tab {
+    padding: 8px 10px;
+    gap: 0;
+  }
+  
+  .admin-tab svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .admin-tab .tab-text {
+    display: none;
+  }
+  
+  .admin-content {
+    padding: 12px;
+  }
+  
+  .admin-section-title {
+    font-size: 16px;
+  }
+  
+  .admin-progress-circle {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .admin-progress-circle-text .percent {
+    font-size: 22px;
+  }
+}
+
+/* Small Phones (360px) */
+@media (max-width: 360px) {
+  .admin-login-card {
+    margin: 8px;
+    padding: 20px 14px;
+  }
+  
+  .admin-header {
+    padding: 10px 12px;
+  }
+  
+  .admin-header-title {
+    font-size: 14px;
+  }
+  
+  .admin-tabs {
+    padding: 4px 8px;
+  }
+  
+  .admin-tab {
+    padding: 8px;
+  }
+  
+  .admin-content {
+    padding: 10px;
+  }
+  
+  .admin-stat-value {
+    font-size: 20px;
+  }
+  
+  .admin-trigger {
+    bottom: 12px;
+    right: 12px;
+    width: 44px;
+    height: 44px;
   }
 }
 /* ===== END ADMIN PANEL STYLES ===== */
