@@ -584,6 +584,14 @@ body {
   z-index: 99;
 }
 
+@media (max-width: 1024px) {
+  .main-content { margin-left: 0; padding: 70px 16px 32px; }
+  .mobile-menu-btn { display: flex !important; }
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+}
+
 @media (max-width: 768px) {
   .mobile-menu-btn { display: flex; }
   .sidebar { transform: translateX(-100%); }
