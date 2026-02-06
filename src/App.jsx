@@ -271,13 +271,15 @@ function App() {
                 const done = chapter.lessons.filter(l => completedLessons.includes(l.id)).length;
                 const infographic = chapterInfographics[chapter.id];
                 return (
-                  <div key={chapter.id} className="chapter-card has-infographic" onClick={() => navigateToLesson(chapter.lessons[0])}>
+                  <div key={chapter.id} className="chapter-card" onClick={() => navigateToLesson(chapter.lessons[0])} style={{ flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
                     {infographic && (
-                      <div className="chapter-card-thumb">
-                        <img src={`${import.meta.env.BASE_URL}${infographic.src.slice(1)}`} alt={infographic.alt} loading="lazy" />
+                      <div style={{ width: '100%', height: '160px', overflow: 'hidden', position: 'relative' }}>
+                        <img src={`${import.meta.env.BASE_URL}${infographic.src.slice(1)}`} alt={infographic.alt} loading="lazy"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', transition: 'transform 0.3s ease' }} />
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40px', background: 'linear-gradient(transparent, var(--bg-card))' }} />
                       </div>
                     )}
-                    <div className="chapter-card-body">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', width: '100%' }}>
                       <div className="chapter-number">{chapter.id}</div>
                       <div className="chapter-info">
                         <div className="chapter-title">{chapter.title}</div>
@@ -324,19 +326,24 @@ function App() {
               </div>
             </div>
 
-            {currentLesson.id.endsWith('-1') && chapterInfographics[parseInt(currentLesson.id)] && (
-              <div className="infographic-container">
-                <div className="infographic-badge"><ImageIcon size={14} /><span>Chapter Overview</span></div>
-                <img
-                  src={`${import.meta.env.BASE_URL}${chapterInfographics[parseInt(currentLesson.id)].src.slice(1)}`}
-                  alt={chapterInfographics[parseInt(currentLesson.id)].alt}
-                  className="infographic-image"
-                  loading="lazy"
-                  onClick={(e) => e.target.classList.toggle('expanded')}
-                />
-                <p className="infographic-caption">👆 Tap to expand</p>
-              </div>
-            )}
+            {(() => {
+              const chapterId = parseInt(currentLesson.id);
+              const infographic = chapterInfographics[chapterId];
+              if (!infographic) return null;
+              return (
+                <div className="infographic-container">
+                  <div className="infographic-badge"><ImageIcon size={14} /><span>Chapter {chapterId} Infographic</span></div>
+                  <img
+                    src={`${import.meta.env.BASE_URL}${infographic.src.slice(1)}`}
+                    alt={infographic.alt}
+                    className="infographic-image"
+                    loading="lazy"
+                    onClick={(e) => e.target.classList.toggle('expanded')}
+                  />
+                  <p className="infographic-caption">👆 Tap to expand</p>
+                </div>
+              );
+            })()}
 
             <div className="lesson-content">{renderContent(currentLesson.content)}</div>
 
