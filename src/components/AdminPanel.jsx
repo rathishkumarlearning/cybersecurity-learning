@@ -1,13 +1,18 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Shield, X, Lock, LayoutDashboard, FolderTree, Users, BarChart3,
   FileText, Map, ChevronRight, ChevronDown, Clock, BookOpen,
   AlertTriangle, Lightbulb, Code, CheckCircle2, XCircle, Download,
   Trash2, Copy, Eye, EyeOff, TrendingUp, Target, Award, Zap,
-  FileCode, MessageSquare, Play, RotateCcw
+  FileCode, MessageSquare, Play, RotateCcw, Plus, Edit3, Save,
+  Upload, ArrowUp, ArrowDown, Search, Filter, RefreshCw, Archive,
+  Undo2, FileJson, FileDown, CheckSquare, Square, Settings
 } from 'lucide-react';
 
 const ADMIN_PASSWORD = 'admin123';
+const STORAGE_KEY_OVERRIDES = 'cybersecurity-course-overrides';
+const STORAGE_KEY_TRASH = 'cybersecurity-course-trash';
+const STORAGE_KEY_PROGRESS = 'cybersecurity-progress';
 
 // Helper function to analyze lesson content
 const analyzeContent = (content) => {
@@ -27,7 +32,77 @@ const parseDuration = (duration) => {
   return match ? parseInt(match[1]) : 0;
 };
 
-export default function AdminPanel({ courseData, isOpen, onClose }) {
+// Generate unique ID
+const generateId = (chapterId, lessonIndex) => {
+  return `${chapterId}-${lessonIndex + 1}`;
+};
+
+// Toast Notification Component
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={`toast toast-${type}`}>
+      {type === 'success' && <CheckCircle2 size={18} />}
+      {type === 'error' && <XCircle size={18} />}
+      {type === 'warning' && <AlertTriangle size={18} />}
+      <span>{message}</span>
+    </div>
+  );
+};
+
+// Confirmation Modal Component
+const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = 'Delete', isDangerous = true }) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <AlertTriangle size={24} className={isDangerous ? 'text-danger' : 'text-warning'} />
+          <h3>{title}</h3>
+        </div>
+        <p className="modal-message">{message}</p>
+        <div className="modal-actions">
+          <button className="modal-btn cancel" onClick={onCancel}>Cancel</button>
+          <button className={`modal-btn ${isDangerous ? 'danger' : 'confirm'}`} onClick={onConfirm}>
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Create/Edit Form Modal
+const FormModal = ({ isOpen, title, children, onClose, onSave, saveText = 'Save' }) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content modal-form">
+        <div className="modal-header">
+          <h3>{title}</h3>
+          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        </div>
+        <div className="modal-body">
+          {children}
+        </div>
+        <div className="modal-actions">
+          <button className="modal-btn cancel" onClick={onClose}>Cancel</button>
+          <button className="modal-btn save" onClick={onSave}>
+            <Save size={16} />{saveText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function AdminPanel({ courseData: baseCourseData, isOpen, onClose }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -36,12 +111,128 @@ export default function AdminPanel({ courseData, isOpen, onClose }) {
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [showRawContent, setShowRawContent] = useState(false);
   const [completedLessons, setCompletedLessons] = useState([]);
+  
+  // CRUD State
+  const [overrides, setOverrides] = useState({ chapters: [], deletedChapters: [], deletedLessons: {} });
+  const [trash, setTrash] = useState({ chapters: [], lessons: [] });
+  const [toasts, setToasts] = useState([]);
+  
+  // Modal State
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+  const [editingChapter, setEditingChapter] = useState(null);
+  const [editingLesson, setEditingLesson] = useState(null);
+  const [isCreatingChapter, setIsCreatingChapter] = useState(false);
+  const [isCreatingLesson, setIsCreatingLesson] = useState(null); // null or chapterId
+  
+  // Form State
+  const [chapterForm, setChapterForm] = useState({ id: '', title: '', description: '' });
+  const [lessonForm, setLessonForm] = useState({ id: '', title: '', duration: '', content: '', chapterId: '' });
+  
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('order'); // order, words, duration
+  const [showLivePreview, setShowLivePreview] = useState(false);
+  
+  // Bulk Selection State
+  const [selectedLessons, setSelectedLessons] = useState(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
 
-  // Load completed lessons from localStorage
+  // Add toast notification
+  const addToast = useCallback((message, type = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // Load data from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('cybersecurity-progress');
-    if (saved) setCompletedLessons(JSON.parse(saved));
+    const savedProgress = localStorage.getItem(STORAGE_KEY_PROGRESS);
+    if (savedProgress) setCompletedLessons(JSON.parse(savedProgress));
+    
+    const savedOverrides = localStorage.getItem(STORAGE_KEY_OVERRIDES);
+    if (savedOverrides) {
+      try {
+        setOverrides(JSON.parse(savedOverrides));
+      } catch (e) {
+        console.error('Failed to parse overrides:', e);
+      }
+    }
+    
+    const savedTrash = localStorage.getItem(STORAGE_KEY_TRASH);
+    if (savedTrash) {
+      try {
+        setTrash(JSON.parse(savedTrash));
+      } catch (e) {
+        console.error('Failed to parse trash:', e);
+      }
+    }
   }, [isOpen]);
+
+  // Save overrides to localStorage
+  const saveOverrides = useCallback((newOverrides) => {
+    setOverrides(newOverrides);
+    localStorage.setItem(STORAGE_KEY_OVERRIDES, JSON.stringify(newOverrides));
+  }, []);
+
+  // Save trash to localStorage
+  const saveTrash = useCallback((newTrash) => {
+    setTrash(newTrash);
+    localStorage.setItem(STORAGE_KEY_TRASH, JSON.stringify(newTrash));
+  }, []);
+
+  // Merge base course data with overrides
+  const courseData = useMemo(() => {
+    if (!baseCourseData) return { chapters: [] };
+    
+    // Start with base data
+    let mergedChapters = [...baseCourseData.chapters];
+    
+    // Apply chapter overrides (modified chapters)
+    if (overrides.chapters) {
+      overrides.chapters.forEach(override => {
+        const existingIndex = mergedChapters.findIndex(ch => ch.id === override.id);
+        if (existingIndex >= 0) {
+          // Update existing chapter
+          mergedChapters[existingIndex] = {
+            ...mergedChapters[existingIndex],
+            ...override,
+            lessons: override.lessons || mergedChapters[existingIndex].lessons,
+            _modified: true
+          };
+        } else {
+          // Add new chapter
+          mergedChapters.push({ ...override, _new: true });
+        }
+      });
+    }
+    
+    // Remove deleted chapters
+    if (overrides.deletedChapters) {
+      mergedChapters = mergedChapters.filter(ch => !overrides.deletedChapters.includes(ch.id));
+    }
+    
+    // Remove deleted lessons from chapters
+    if (overrides.deletedLessons) {
+      mergedChapters = mergedChapters.map(ch => {
+        const deletedFromChapter = overrides.deletedLessons[ch.id] || [];
+        return {
+          ...ch,
+          lessons: ch.lessons.filter(l => !deletedFromChapter.includes(l.id))
+        };
+      });
+    }
+    
+    // Sort chapters by id
+    mergedChapters.sort((a, b) => a.id - b.id);
+    
+    return {
+      ...baseCourseData,
+      chapters: mergedChapters
+    };
+  }, [baseCourseData, overrides]);
 
   // Course statistics
   const stats = useMemo(() => {
@@ -95,7 +286,7 @@ export default function AdminPanel({ courseData, isOpen, onClose }) {
       totalCodeBlocks,
       totalTips,
       totalWarnings,
-      avgWordCount: Math.round(totalWordCount / totalLessons),
+      avgWordCount: totalLessons > 0 ? Math.round(totalWordCount / totalLessons) : 0,
       completedCount: completedLessons.length,
       completionPercent,
       shortLessons,
@@ -105,6 +296,39 @@ export default function AdminPanel({ courseData, isOpen, onClose }) {
       chapterProgress
     };
   }, [courseData, completedLessons]);
+
+  // Filtered and sorted lessons
+  const filteredLessons = useMemo(() => {
+    let lessons = courseData.chapters.flatMap(ch => 
+      ch.lessons.map(l => ({ ...l, chapterId: ch.id, chapterTitle: ch.title }))
+    );
+    
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      lessons = lessons.filter(l => 
+        l.title.toLowerCase().includes(query) ||
+        l.content.toLowerCase().includes(query)
+      );
+    }
+    
+    // Apply sorting
+    switch (sortBy) {
+      case 'words':
+        lessons.sort((a, b) => analyzeContent(b.content).wordCount - analyzeContent(a.content).wordCount);
+        break;
+      case 'duration':
+        lessons.sort((a, b) => parseDuration(b.duration) - parseDuration(a.duration));
+        break;
+      default: // order
+        lessons.sort((a, b) => {
+          if (a.chapterId !== b.chapterId) return a.chapterId - b.chapterId;
+          return a.id.localeCompare(b.id);
+        });
+    }
+    
+    return lessons;
+  }, [courseData, searchQuery, sortBy]);
 
   // Get last accessed timestamp
   const lastAccessed = useMemo(() => {
@@ -132,13 +356,585 @@ export default function AdminPanel({ courseData, isOpen, onClose }) {
     }));
   };
 
+  // ============ CREATE OPERATIONS ============
+  
+  const handleCreateChapter = () => {
+    const maxId = Math.max(...courseData.chapters.map(ch => ch.id), 0);
+    setChapterForm({
+      id: maxId + 1,
+      title: '',
+      description: ''
+    });
+    setIsCreatingChapter(true);
+  };
+
+  const handleSaveNewChapter = () => {
+    if (!chapterForm.title.trim()) {
+      addToast('Chapter title is required', 'error');
+      return;
+    }
+    
+    const newChapter = {
+      id: parseInt(chapterForm.id),
+      title: chapterForm.title.trim(),
+      description: chapterForm.description.trim(),
+      lessons: []
+    };
+    
+    const newOverrides = {
+      ...overrides,
+      chapters: [...(overrides.chapters || []), newChapter]
+    };
+    
+    saveOverrides(newOverrides);
+    setIsCreatingChapter(false);
+    setChapterForm({ id: '', title: '', description: '' });
+    addToast(`Chapter "${newChapter.title}" created!`, 'success');
+  };
+
+  const handleCreateLesson = (chapterId) => {
+    const chapter = courseData.chapters.find(ch => ch.id === chapterId);
+    const lessonIndex = chapter ? chapter.lessons.length : 0;
+    
+    setLessonForm({
+      id: generateId(chapterId, lessonIndex),
+      title: '',
+      duration: '5 min',
+      content: `## Introduction\n\nYour lesson content here...\n\n### Section 1\n\nContent...\n\n<tip>\n💡 Add helpful tips here!\n</tip>\n`,
+      chapterId: chapterId
+    });
+    setIsCreatingLesson(chapterId);
+  };
+
+  const handleSaveNewLesson = () => {
+    if (!lessonForm.title.trim()) {
+      addToast('Lesson title is required', 'error');
+      return;
+    }
+    
+    const newLesson = {
+      id: lessonForm.id,
+      title: lessonForm.title.trim(),
+      duration: lessonForm.duration.trim() || '5 min',
+      content: lessonForm.content
+    };
+    
+    // Find or create the chapter override
+    const chapterId = parseInt(lessonForm.chapterId);
+    const existingChapterOverride = overrides.chapters?.find(ch => ch.id === chapterId);
+    const baseChapter = baseCourseData.chapters.find(ch => ch.id === chapterId);
+    
+    let updatedChapters;
+    
+    if (existingChapterOverride) {
+      // Update existing override
+      updatedChapters = overrides.chapters.map(ch => {
+        if (ch.id === chapterId) {
+          return {
+            ...ch,
+            lessons: [...(ch.lessons || baseChapter?.lessons || []), newLesson]
+          };
+        }
+        return ch;
+      });
+    } else if (baseChapter) {
+      // Create new override from base
+      updatedChapters = [
+        ...(overrides.chapters || []),
+        {
+          ...baseChapter,
+          lessons: [...baseChapter.lessons, newLesson]
+        }
+      ];
+    } else {
+      addToast('Chapter not found', 'error');
+      return;
+    }
+    
+    const newOverrides = {
+      ...overrides,
+      chapters: updatedChapters
+    };
+    
+    saveOverrides(newOverrides);
+    setIsCreatingLesson(null);
+    setLessonForm({ id: '', title: '', duration: '', content: '', chapterId: '' });
+    addToast(`Lesson "${newLesson.title}" created!`, 'success');
+  };
+
+  // ============ UPDATE OPERATIONS ============
+
+  const handleEditChapter = (chapter) => {
+    setChapterForm({
+      id: chapter.id,
+      title: chapter.title,
+      description: chapter.description || ''
+    });
+    setEditingChapter(chapter);
+  };
+
+  const handleSaveChapterEdit = () => {
+    const chapterId = editingChapter.id;
+    const existingOverride = overrides.chapters?.find(ch => ch.id === chapterId);
+    const baseChapter = baseCourseData.chapters.find(ch => ch.id === chapterId);
+    
+    let updatedChapters;
+    
+    if (existingOverride) {
+      updatedChapters = overrides.chapters.map(ch => {
+        if (ch.id === chapterId) {
+          return {
+            ...ch,
+            title: chapterForm.title.trim(),
+            description: chapterForm.description.trim()
+          };
+        }
+        return ch;
+      });
+    } else {
+      updatedChapters = [
+        ...(overrides.chapters || []),
+        {
+          ...(baseChapter || {}),
+          id: chapterId,
+          title: chapterForm.title.trim(),
+          description: chapterForm.description.trim(),
+          lessons: baseChapter?.lessons || []
+        }
+      ];
+    }
+    
+    const newOverrides = { ...overrides, chapters: updatedChapters };
+    saveOverrides(newOverrides);
+    setEditingChapter(null);
+    setChapterForm({ id: '', title: '', description: '' });
+    addToast('Chapter updated!', 'success');
+  };
+
+  const handleEditLesson = (lesson, chapterId) => {
+    setLessonForm({
+      id: lesson.id,
+      title: lesson.title,
+      duration: lesson.duration,
+      content: lesson.content,
+      chapterId: chapterId
+    });
+    setEditingLesson({ ...lesson, chapterId });
+    setActiveTab('editor');
+    setShowLivePreview(true);
+  };
+
+  const handleSaveLessonEdit = () => {
+    const chapterId = parseInt(editingLesson.chapterId);
+    const existingChapterOverride = overrides.chapters?.find(ch => ch.id === chapterId);
+    const baseChapter = baseCourseData.chapters.find(ch => ch.id === chapterId);
+    
+    const updatedLesson = {
+      id: lessonForm.id,
+      title: lessonForm.title.trim(),
+      duration: lessonForm.duration.trim(),
+      content: lessonForm.content,
+      _modified: true
+    };
+    
+    let updatedChapters;
+    
+    if (existingChapterOverride) {
+      updatedChapters = overrides.chapters.map(ch => {
+        if (ch.id === chapterId) {
+          const lessons = ch.lessons || baseChapter?.lessons || [];
+          const lessonIndex = lessons.findIndex(l => l.id === updatedLesson.id);
+          
+          let newLessons;
+          if (lessonIndex >= 0) {
+            newLessons = lessons.map(l => l.id === updatedLesson.id ? updatedLesson : l);
+          } else {
+            newLessons = lessons.map(l => l.id === updatedLesson.id ? updatedLesson : l);
+            // Check if lesson exists in base but not override
+            const baseLesson = baseChapter?.lessons.find(l => l.id === updatedLesson.id);
+            if (baseLesson) {
+              newLessons = baseChapter.lessons.map(l => l.id === updatedLesson.id ? updatedLesson : l);
+            }
+          }
+          
+          return { ...ch, lessons: newLessons };
+        }
+        return ch;
+      });
+    } else {
+      const baseLessons = baseChapter?.lessons || [];
+      const newLessons = baseLessons.map(l => l.id === updatedLesson.id ? updatedLesson : l);
+      
+      updatedChapters = [
+        ...(overrides.chapters || []),
+        {
+          ...baseChapter,
+          lessons: newLessons
+        }
+      ];
+    }
+    
+    const newOverrides = { ...overrides, chapters: updatedChapters };
+    saveOverrides(newOverrides);
+    setEditingLesson(null);
+    setLessonForm({ id: '', title: '', duration: '', content: '', chapterId: '' });
+    addToast('Lesson saved!', 'success');
+  };
+
+  const handleMoveChapter = (chapterId, direction) => {
+    const chapters = [...courseData.chapters];
+    const index = chapters.findIndex(ch => ch.id === chapterId);
+    
+    if (direction === 'up' && index > 0) {
+      // Swap IDs
+      const tempId = chapters[index].id;
+      chapters[index].id = chapters[index - 1].id;
+      chapters[index - 1].id = tempId;
+    } else if (direction === 'down' && index < chapters.length - 1) {
+      const tempId = chapters[index].id;
+      chapters[index].id = chapters[index + 1].id;
+      chapters[index + 1].id = tempId;
+    }
+    
+    // Update overrides with new chapter order
+    const newOverrides = {
+      ...overrides,
+      chapters: chapters.map(ch => ({
+        ...ch,
+        lessons: ch.lessons
+      }))
+    };
+    
+    saveOverrides(newOverrides);
+    addToast('Chapter reordered!', 'success');
+  };
+
+  const handleMoveLesson = (lessonId, chapterId, direction) => {
+    const chapter = courseData.chapters.find(ch => ch.id === chapterId);
+    if (!chapter) return;
+    
+    const lessons = [...chapter.lessons];
+    const index = lessons.findIndex(l => l.id === lessonId);
+    
+    if (direction === 'up' && index > 0) {
+      [lessons[index], lessons[index - 1]] = [lessons[index - 1], lessons[index]];
+    } else if (direction === 'down' && index < lessons.length - 1) {
+      [lessons[index], lessons[index + 1]] = [lessons[index + 1], lessons[index]];
+    }
+    
+    // Regenerate IDs
+    const reorderedLessons = lessons.map((l, i) => ({
+      ...l,
+      id: generateId(chapterId, i)
+    }));
+    
+    // Update chapter override
+    const existingOverride = overrides.chapters?.find(ch => ch.id === chapterId);
+    let updatedChapters;
+    
+    if (existingOverride) {
+      updatedChapters = overrides.chapters.map(ch => 
+        ch.id === chapterId ? { ...ch, lessons: reorderedLessons } : ch
+      );
+    } else {
+      updatedChapters = [
+        ...(overrides.chapters || []),
+        { ...chapter, lessons: reorderedLessons }
+      ];
+    }
+    
+    const newOverrides = { ...overrides, chapters: updatedChapters };
+    saveOverrides(newOverrides);
+    addToast('Lesson reordered!', 'success');
+  };
+
+  // ============ DELETE OPERATIONS ============
+
+  const handleDeleteChapter = (chapter) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Chapter?',
+      message: `Are you sure you want to delete "${chapter.title}"? This will also delete ${chapter.lessons.length} lessons. This action moves items to trash.`,
+      onConfirm: () => {
+        // Move to trash
+        const newTrash = {
+          ...trash,
+          chapters: [...trash.chapters, { ...chapter, deletedAt: new Date().toISOString() }]
+        };
+        saveTrash(newTrash);
+        
+        // Add to deleted chapters
+        const newOverrides = {
+          ...overrides,
+          deletedChapters: [...(overrides.deletedChapters || []), chapter.id]
+        };
+        saveOverrides(newOverrides);
+        
+        setConfirmModal({ isOpen: false });
+        addToast(`Chapter "${chapter.title}" moved to trash`, 'success');
+      }
+    });
+  };
+
+  const handleDeleteLesson = (lesson, chapterId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Lesson?',
+      message: `Are you sure you want to delete "${lesson.title}"? This action moves the lesson to trash.`,
+      onConfirm: () => {
+        // Move to trash
+        const newTrash = {
+          ...trash,
+          lessons: [...trash.lessons, { ...lesson, chapterId, deletedAt: new Date().toISOString() }]
+        };
+        saveTrash(newTrash);
+        
+        // Add to deleted lessons
+        const deletedLessons = { ...overrides.deletedLessons };
+        if (!deletedLessons[chapterId]) deletedLessons[chapterId] = [];
+        deletedLessons[chapterId].push(lesson.id);
+        
+        const newOverrides = { ...overrides, deletedLessons };
+        saveOverrides(newOverrides);
+        
+        setConfirmModal({ isOpen: false });
+        setSelectedLesson(null);
+        addToast(`Lesson "${lesson.title}" moved to trash`, 'success');
+      }
+    });
+  };
+
+  const handleRestoreChapter = (chapter) => {
+    // Remove from trash
+    const newTrash = {
+      ...trash,
+      chapters: trash.chapters.filter(ch => ch.id !== chapter.id)
+    };
+    saveTrash(newTrash);
+    
+    // Remove from deleted chapters
+    const newOverrides = {
+      ...overrides,
+      deletedChapters: (overrides.deletedChapters || []).filter(id => id !== chapter.id)
+    };
+    saveOverrides(newOverrides);
+    
+    addToast(`Chapter "${chapter.title}" restored!`, 'success');
+  };
+
+  const handleRestoreLesson = (lesson) => {
+    // Remove from trash
+    const newTrash = {
+      ...trash,
+      lessons: trash.lessons.filter(l => l.id !== lesson.id)
+    };
+    saveTrash(newTrash);
+    
+    // Remove from deleted lessons
+    const deletedLessons = { ...overrides.deletedLessons };
+    if (deletedLessons[lesson.chapterId]) {
+      deletedLessons[lesson.chapterId] = deletedLessons[lesson.chapterId].filter(id => id !== lesson.id);
+    }
+    
+    const newOverrides = { ...overrides, deletedLessons };
+    saveOverrides(newOverrides);
+    
+    addToast(`Lesson "${lesson.title}" restored!`, 'success');
+  };
+
+  const handleEmptyTrash = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Empty Trash?',
+      message: 'This will permanently delete all items in the trash. This action cannot be undone!',
+      onConfirm: () => {
+        saveTrash({ chapters: [], lessons: [] });
+        setConfirmModal({ isOpen: false });
+        addToast('Trash emptied', 'success');
+      }
+    });
+  };
+
+  // ============ BULK OPERATIONS ============
+
+  const handleToggleLessonSelect = (lessonId) => {
+    setSelectedLessons(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(lessonId)) {
+        newSet.delete(lessonId);
+      } else {
+        newSet.add(lessonId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const allLessonIds = courseData.chapters.flatMap(ch => ch.lessons.map(l => l.id));
+    setSelectedLessons(new Set(allLessonIds));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedLessons(new Set());
+  };
+
+  const handleBulkMarkComplete = () => {
+    const newCompleted = [...new Set([...completedLessons, ...selectedLessons])];
+    setCompletedLessons(newCompleted);
+    localStorage.setItem(STORAGE_KEY_PROGRESS, JSON.stringify(newCompleted));
+    addToast(`${selectedLessons.size} lessons marked as complete`, 'success');
+    setSelectedLessons(new Set());
+    setBulkMode(false);
+  };
+
+  const handleBulkMarkIncomplete = () => {
+    const newCompleted = completedLessons.filter(id => !selectedLessons.has(id));
+    setCompletedLessons(newCompleted);
+    localStorage.setItem(STORAGE_KEY_PROGRESS, JSON.stringify(newCompleted));
+    addToast(`${selectedLessons.size} lessons marked as incomplete`, 'success');
+    setSelectedLessons(new Set());
+    setBulkMode(false);
+  };
+
+  const handleBulkDelete = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Selected Lessons?',
+      message: `Are you sure you want to delete ${selectedLessons.size} lessons? They will be moved to trash.`,
+      onConfirm: () => {
+        const lessonsToDelete = courseData.chapters.flatMap(ch => 
+          ch.lessons.filter(l => selectedLessons.has(l.id)).map(l => ({ ...l, chapterId: ch.id }))
+        );
+        
+        // Add to trash
+        const newTrash = {
+          ...trash,
+          lessons: [...trash.lessons, ...lessonsToDelete.map(l => ({ ...l, deletedAt: new Date().toISOString() }))]
+        };
+        saveTrash(newTrash);
+        
+        // Add to deleted lessons
+        const deletedLessons = { ...overrides.deletedLessons };
+        lessonsToDelete.forEach(l => {
+          if (!deletedLessons[l.chapterId]) deletedLessons[l.chapterId] = [];
+          deletedLessons[l.chapterId].push(l.id);
+        });
+        
+        const newOverrides = { ...overrides, deletedLessons };
+        saveOverrides(newOverrides);
+        
+        setConfirmModal({ isOpen: false });
+        setSelectedLessons(new Set());
+        setBulkMode(false);
+        addToast(`${lessonsToDelete.length} lessons moved to trash`, 'success');
+      }
+    });
+  };
+
+  // ============ IMPORT/EXPORT OPERATIONS ============
+
+  const handleExportCourse = () => {
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      version: '1.0',
+      courseData: courseData,
+      overrides: overrides,
+      progress: completedLessons
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cybersecurity-course-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    addToast('Course exported!', 'success');
+  };
+
+  const handleImportCourse = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        
+        if (imported.overrides) {
+          saveOverrides(imported.overrides);
+        }
+        
+        if (imported.progress) {
+          setCompletedLessons(imported.progress);
+          localStorage.setItem(STORAGE_KEY_PROGRESS, JSON.stringify(imported.progress));
+        }
+        
+        addToast('Course imported successfully!', 'success');
+      } catch (err) {
+        addToast('Failed to import: Invalid JSON file', 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+  const handleExportMarkdown = () => {
+    let markdown = `# ${courseData.title || 'Cybersecurity Course'}\n\n`;
+    markdown += `${courseData.subtitle || ''}\n\n---\n\n`;
+    
+    courseData.chapters.forEach(chapter => {
+      markdown += `# Chapter ${chapter.id}: ${chapter.title}\n\n`;
+      markdown += `*${chapter.description}*\n\n`;
+      
+      chapter.lessons.forEach(lesson => {
+        markdown += `## ${lesson.title}\n\n`;
+        markdown += `**Duration:** ${lesson.duration}\n\n`;
+        markdown += lesson.content + '\n\n';
+        markdown += '---\n\n';
+      });
+    });
+    
+    const blob = new Blob([markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cybersecurity-course-${new Date().toISOString().split('T')[0]}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    addToast('Exported as Markdown!', 'success');
+  };
+
+  const handleResetToDefault = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Reset to Default?',
+      message: 'This will clear all your modifications and revert to the original course content. Progress will be preserved. This cannot be undone!',
+      onConfirm: () => {
+        localStorage.removeItem(STORAGE_KEY_OVERRIDES);
+        localStorage.removeItem(STORAGE_KEY_TRASH);
+        setOverrides({ chapters: [], deletedChapters: [], deletedLessons: {} });
+        setTrash({ chapters: [], lessons: [] });
+        setConfirmModal({ isOpen: false });
+        addToast('Course reset to default', 'success');
+      }
+    });
+  };
+
   // Reset progress
   const handleResetProgress = () => {
-    if (confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
-      localStorage.removeItem('cybersecurity-progress');
-      localStorage.removeItem('cybersecurity-last-accessed');
-      setCompletedLessons([]);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Reset Progress?',
+      message: 'Are you sure you want to reset all progress? This cannot be undone.',
+      onConfirm: () => {
+        localStorage.removeItem(STORAGE_KEY_PROGRESS);
+        localStorage.removeItem('cybersecurity-last-accessed');
+        setCompletedLessons([]);
+        setConfirmModal({ isOpen: false });
+        addToast('Progress reset', 'success');
+      }
+    });
   };
 
   // Export progress as JSON
@@ -163,12 +959,17 @@ export default function AdminPanel({ courseData, isOpen, onClose }) {
     a.download = `cybersecurity-progress-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    addToast('Progress exported!', 'success');
   };
 
   // Copy content to clipboard
   const handleCopyContent = () => {
-    if (selectedLesson) {
+    if (editingLesson) {
+      navigator.clipboard.writeText(lessonForm.content);
+      addToast('Content copied!', 'success');
+    } else if (selectedLesson) {
       navigator.clipboard.writeText(selectedLesson.content);
+      addToast('Content copied!', 'success');
     }
   };
 
@@ -294,21 +1095,166 @@ export default function AdminPanel({ courseData, isOpen, onClose }) {
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'manage', label: 'Manage', icon: Settings },
     { id: 'content', label: 'Content', icon: FolderTree },
     { id: 'progress', label: 'Progress', icon: Users },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'editor', label: 'Preview', icon: FileText },
-    { id: 'structure', label: 'Structure', icon: Map },
+    { id: 'editor', label: 'Editor', icon: Edit3 },
+    { id: 'trash', label: 'Trash', icon: Trash2, badge: trash.chapters.length + trash.lessons.length },
   ];
 
   return (
     <div className="admin-overlay">
+      {/* Toast Notifications */}
+      <div className="toast-container">
+        {toasts.map(toast => (
+          <Toast 
+            key={toast.id} 
+            message={toast.message} 
+            type={toast.type} 
+            onClose={() => removeToast(toast.id)} 
+          />
+        ))}
+      </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ isOpen: false })}
+      />
+
+      {/* Create Chapter Modal */}
+      <FormModal
+        isOpen={isCreatingChapter}
+        title="Create New Chapter"
+        onClose={() => setIsCreatingChapter(false)}
+        onSave={handleSaveNewChapter}
+        saveText="Create Chapter"
+      >
+        <div className="form-group">
+          <label>Chapter Number</label>
+          <input
+            type="number"
+            value={chapterForm.id}
+            onChange={(e) => setChapterForm({ ...chapterForm, id: e.target.value })}
+            className="form-input"
+          />
+        </div>
+        <div className="form-group">
+          <label>Title *</label>
+          <input
+            type="text"
+            value={chapterForm.title}
+            onChange={(e) => setChapterForm({ ...chapterForm, title: e.target.value })}
+            placeholder="Chapter title..."
+            className="form-input"
+            autoFocus
+          />
+        </div>
+        <div className="form-group">
+          <label>Description</label>
+          <textarea
+            value={chapterForm.description}
+            onChange={(e) => setChapterForm({ ...chapterForm, description: e.target.value })}
+            placeholder="Brief description..."
+            className="form-textarea"
+            rows={3}
+          />
+        </div>
+      </FormModal>
+
+      {/* Edit Chapter Modal */}
+      <FormModal
+        isOpen={!!editingChapter}
+        title="Edit Chapter"
+        onClose={() => setEditingChapter(null)}
+        onSave={handleSaveChapterEdit}
+      >
+        <div className="form-group">
+          <label>Title *</label>
+          <input
+            type="text"
+            value={chapterForm.title}
+            onChange={(e) => setChapterForm({ ...chapterForm, title: e.target.value })}
+            className="form-input"
+            autoFocus
+          />
+        </div>
+        <div className="form-group">
+          <label>Description</label>
+          <textarea
+            value={chapterForm.description}
+            onChange={(e) => setChapterForm({ ...chapterForm, description: e.target.value })}
+            className="form-textarea"
+            rows={3}
+          />
+        </div>
+      </FormModal>
+
+      {/* Create Lesson Modal */}
+      <FormModal
+        isOpen={!!isCreatingLesson}
+        title="Create New Lesson"
+        onClose={() => setIsCreatingLesson(null)}
+        onSave={handleSaveNewLesson}
+        saveText="Create Lesson"
+      >
+        <div className="form-row">
+          <div className="form-group">
+            <label>Lesson ID</label>
+            <input
+              type="text"
+              value={lessonForm.id}
+              onChange={(e) => setLessonForm({ ...lessonForm, id: e.target.value })}
+              className="form-input"
+            />
+          </div>
+          <div className="form-group">
+            <label>Duration</label>
+            <input
+              type="text"
+              value={lessonForm.duration}
+              onChange={(e) => setLessonForm({ ...lessonForm, duration: e.target.value })}
+              placeholder="e.g., 10 min"
+              className="form-input"
+            />
+          </div>
+        </div>
+        <div className="form-group">
+          <label>Title *</label>
+          <input
+            type="text"
+            value={lessonForm.title}
+            onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
+            placeholder="Lesson title..."
+            className="form-input"
+            autoFocus
+          />
+        </div>
+        <div className="form-group">
+          <label>Content (Markdown)</label>
+          <textarea
+            value={lessonForm.content}
+            onChange={(e) => setLessonForm({ ...lessonForm, content: e.target.value })}
+            placeholder="Lesson content in markdown..."
+            className="form-textarea form-textarea-code"
+            rows={10}
+          />
+        </div>
+      </FormModal>
+
       <div className="admin-container">
         {/* Header */}
         <div className="admin-header">
           <div className="admin-header-title">
             <Shield size={24} />
             <span>Admin Panel</span>
+            {(overrides.chapters?.length > 0 || Object.keys(overrides.deletedLessons || {}).length > 0) && (
+              <span className="badge badge-modified">Modified</span>
+            )}
           </div>
           <button className="admin-close-btn" onClick={onClose}>
             <X size={24} />
@@ -322,10 +1268,10 @@ export default function AdminPanel({ courseData, isOpen, onClose }) {
               key={tab.id}
               className={`admin-tab ${activeTab === tab.id ? 'active' : ''}`}
               onClick={() => setActiveTab(tab.id)}
-              title={tab.label}
             >
               <tab.icon size={18} />
-              <span className="tab-text">{tab.label}</span>
+              <span>{tab.label}</span>
+              {tab.badge > 0 && <span className="tab-badge">{tab.badge}</span>}
             </button>
           ))}
         </div>
@@ -424,82 +1370,329 @@ export default function AdminPanel({ courseData, isOpen, onClose }) {
             </div>
           )}
 
-          {/* Content Manager Tab */}
-          {activeTab === 'content' && (
-            <div className="admin-content-manager">
+          {/* Manage Tab (CRUD Hub) */}
+          {activeTab === 'manage' && (
+            <div className="admin-manage">
               <div className="admin-section-title">
-                <FolderTree size={20} />
-                <span>Content Manager</span>
+                <Settings size={20} />
+                <span>Content Management</span>
               </div>
 
-              <div className="admin-tree-container">
-                {courseData.chapters.map(chapter => (
-                  <div key={chapter.id} className="admin-tree-chapter">
-                    <div 
-                      className="admin-tree-chapter-header"
-                      onClick={() => toggleChapter(chapter.id)}
-                    >
-                      {expandedChapters[chapter.id] ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                      <FolderTree size={18} />
-                      <span className="admin-tree-chapter-title">
-                        Chapter {chapter.id}: {chapter.title}
-                      </span>
-                      <span className="admin-tree-lesson-count">
-                        {chapter.lessons.length} lessons
-                      </span>
+              {/* Action Buttons */}
+              <div className="admin-action-grid">
+                <button className="admin-crud-btn create" onClick={handleCreateChapter}>
+                  <Plus size={20} />
+                  <span>Add Chapter</span>
+                </button>
+                <button className="admin-crud-btn import" onClick={() => document.getElementById('import-input').click()}>
+                  <Upload size={20} />
+                  <span>Import Course</span>
+                </button>
+                <input
+                  id="import-input"
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportCourse}
+                  style={{ display: 'none' }}
+                />
+                <button className="admin-crud-btn export" onClick={handleExportCourse}>
+                  <Download size={20} />
+                  <span>Export Course</span>
+                </button>
+                <button className="admin-crud-btn markdown" onClick={handleExportMarkdown}>
+                  <FileDown size={20} />
+                  <span>Export Markdown</span>
+                </button>
+                <button className="admin-crud-btn reset" onClick={handleResetToDefault}>
+                  <RefreshCw size={20} />
+                  <span>Reset to Default</span>
+                </button>
+                <button 
+                  className={`admin-crud-btn bulk ${bulkMode ? 'active' : ''}`} 
+                  onClick={() => setBulkMode(!bulkMode)}
+                >
+                  <CheckSquare size={20} />
+                  <span>Bulk Mode</span>
+                </button>
+              </div>
+
+              {/* Bulk Actions */}
+              {bulkMode && selectedLessons.size > 0 && (
+                <div className="bulk-actions-bar">
+                  <span>{selectedLessons.size} selected</span>
+                  <button className="bulk-btn" onClick={handleSelectAll}>Select All</button>
+                  <button className="bulk-btn" onClick={handleDeselectAll}>Deselect All</button>
+                  <button className="bulk-btn complete" onClick={handleBulkMarkComplete}>
+                    <CheckCircle2 size={16} /> Mark Complete
+                  </button>
+                  <button className="bulk-btn incomplete" onClick={handleBulkMarkIncomplete}>
+                    <XCircle size={16} /> Mark Incomplete
+                  </button>
+                  <button className="bulk-btn delete" onClick={handleBulkDelete}>
+                    <Trash2 size={16} /> Delete
+                  </button>
+                </div>
+              )}
+
+              {/* Search & Filter */}
+              <div className="admin-search-bar">
+                <div className="search-input-wrapper">
+                  <Search size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search lessons..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="search-input"
+                  />
+                </div>
+                <select 
+                  value={sortBy} 
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="sort-select"
+                >
+                  <option value="order">Sort: Chapter Order</option>
+                  <option value="words">Sort: Word Count</option>
+                  <option value="duration">Sort: Duration</option>
+                </select>
+              </div>
+
+              {/* Chapter & Lesson Management */}
+              <div className="admin-chapters-list">
+                {courseData.chapters.map((chapter, chapterIndex) => (
+                  <div key={chapter.id} className={`admin-chapter-item ${chapter._modified ? 'modified' : ''} ${chapter._new ? 'new' : ''}`}>
+                    <div className="admin-chapter-header">
+                      <div className="admin-chapter-info" onClick={() => toggleChapter(chapter.id)}>
+                        {expandedChapters[chapter.id] ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                        <div className="admin-chapter-badge">{chapter.id}</div>
+                        <div className="admin-chapter-text">
+                          <span className="admin-chapter-title">
+                            {chapter.title}
+                            {chapter._modified && <span className="badge-inline modified">Modified</span>}
+                            {chapter._new && <span className="badge-inline new">New</span>}
+                          </span>
+                          <span className="admin-chapter-desc">{chapter.description}</span>
+                        </div>
+                      </div>
+                      <div className="admin-chapter-actions">
+                        <button 
+                          className="icon-btn" 
+                          onClick={() => handleMoveChapter(chapter.id, 'up')}
+                          disabled={chapterIndex === 0}
+                          title="Move Up"
+                        >
+                          <ArrowUp size={16} />
+                        </button>
+                        <button 
+                          className="icon-btn" 
+                          onClick={() => handleMoveChapter(chapter.id, 'down')}
+                          disabled={chapterIndex === courseData.chapters.length - 1}
+                          title="Move Down"
+                        >
+                          <ArrowDown size={16} />
+                        </button>
+                        <button className="icon-btn edit" onClick={() => handleEditChapter(chapter)} title="Edit">
+                          <Edit3 size={16} />
+                        </button>
+                        <button className="icon-btn add" onClick={() => handleCreateLesson(chapter.id)} title="Add Lesson">
+                          <Plus size={16} />
+                        </button>
+                        <button className="icon-btn delete" onClick={() => handleDeleteChapter(chapter)} title="Delete">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
 
                     {expandedChapters[chapter.id] && (
-                      <div className="admin-tree-lessons">
-                        {chapter.lessons.map(lesson => {
-                          const analysis = analyzeContent(lesson.content);
-                          const isShort = analysis.wordCount < 200;
+                      <div className="admin-lessons-list">
+                        {chapter.lessons.map((lesson, lessonIndex) => {
                           const isCompleted = completedLessons.includes(lesson.id);
+                          const analysis = analyzeContent(lesson.content);
+                          const isSelected = selectedLessons.has(lesson.id);
                           
                           return (
                             <div 
-                              key={lesson.id}
-                              className={`admin-tree-lesson ${isShort ? 'short' : ''} ${selectedLesson?.id === lesson.id ? 'selected' : ''}`}
-                              onClick={() => setSelectedLesson(lesson)}
+                              key={lesson.id} 
+                              className={`admin-lesson-item ${lesson._modified ? 'modified' : ''} ${isSelected ? 'selected' : ''}`}
                             >
-                              <div className="admin-tree-lesson-info">
+                              {bulkMode && (
+                                <button 
+                                  className="bulk-checkbox"
+                                  onClick={() => handleToggleLessonSelect(lesson.id)}
+                                >
+                                  {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                                </button>
+                              )}
+                              <div className="admin-lesson-info" onClick={() => setSelectedLesson(lesson)}>
                                 {isCompleted ? (
-                                  <CheckCircle2 size={16} className="completed" />
+                                  <CheckCircle2 size={16} className="icon-complete" />
                                 ) : (
                                   <BookOpen size={16} />
                                 )}
-                                <span className="admin-tree-lesson-title">{lesson.title}</span>
-                              </div>
-                              <div className="admin-tree-lesson-meta">
-                                <span className="admin-tree-lesson-id">{lesson.id}</span>
-                                <span className="admin-tree-lesson-duration">{lesson.duration}</span>
-                                <span className={`admin-tree-lesson-words ${isShort ? 'warning' : ''}`}>
-                                  {analysis.wordCount} words
+                                <span className="admin-lesson-title">
+                                  {lesson.title}
+                                  {lesson._modified && <span className="badge-inline modified">Modified</span>}
                                 </span>
+                              </div>
+                              <div className="admin-lesson-meta">
+                                <span className="meta-id">{lesson.id}</span>
+                                <span className="meta-duration">{lesson.duration}</span>
+                                <span className={`meta-words ${analysis.wordCount < 200 ? 'warning' : ''}`}>
+                                  {analysis.wordCount}w
+                                </span>
+                              </div>
+                              <div className="admin-lesson-actions">
+                                <button 
+                                  className="icon-btn" 
+                                  onClick={() => handleMoveLesson(lesson.id, chapter.id, 'up')}
+                                  disabled={lessonIndex === 0}
+                                  title="Move Up"
+                                >
+                                  <ArrowUp size={14} />
+                                </button>
+                                <button 
+                                  className="icon-btn" 
+                                  onClick={() => handleMoveLesson(lesson.id, chapter.id, 'down')}
+                                  disabled={lessonIndex === chapter.lessons.length - 1}
+                                  title="Move Down"
+                                >
+                                  <ArrowDown size={14} />
+                                </button>
+                                <button 
+                                  className="icon-btn edit" 
+                                  onClick={() => handleEditLesson(lesson, chapter.id)}
+                                  title="Edit"
+                                >
+                                  <Edit3 size={14} />
+                                </button>
+                                <button 
+                                  className="icon-btn delete" 
+                                  onClick={() => handleDeleteLesson(lesson, chapter.id)}
+                                  title="Delete"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
                               </div>
                             </div>
                           );
                         })}
+                        {chapter.lessons.length === 0 && (
+                          <div className="admin-empty-lessons">
+                            No lessons yet. <button onClick={() => handleCreateLesson(chapter.id)}>Add one</button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 ))}
               </div>
+            </div>
+          )}
 
-              {/* Content Quality Alerts */}
-              {(stats.shortLessons.length > 0) && (
-                <div className="admin-quality-alerts">
-                  <h4>
-                    <AlertTriangle size={16} />
-                    Content Quality Alerts
-                  </h4>
-                  {stats.shortLessons.length > 0 && (
-                    <div className="admin-alert-item warning">
-                      <span>{stats.shortLessons.length} lessons have &lt;200 words</span>
+          {/* Content Manager Tab */}
+          {activeTab === 'content' && (
+            <div className="admin-content-manager">
+              <div className="admin-section-title">
+                <FolderTree size={20} />
+                <span>Content Browser</span>
+              </div>
+
+              {/* Search Bar */}
+              <div className="admin-search-bar">
+                <div className="search-input-wrapper">
+                  <Search size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search lessons..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="search-input"
+                  />
+                </div>
+                <select 
+                  value={sortBy} 
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="sort-select"
+                >
+                  <option value="order">Sort: Chapter Order</option>
+                  <option value="words">Sort: Word Count</option>
+                  <option value="duration">Sort: Duration</option>
+                </select>
+              </div>
+
+              <div className="admin-content-split">
+                {/* Lesson List */}
+                <div className="admin-lesson-list-panel">
+                  {filteredLessons.map(lesson => {
+                    const analysis = analyzeContent(lesson.content);
+                    const isCompleted = completedLessons.includes(lesson.id);
+                    
+                    return (
+                      <div 
+                        key={lesson.id}
+                        className={`admin-content-item ${selectedLesson?.id === lesson.id ? 'selected' : ''}`}
+                        onClick={() => setSelectedLesson(lesson)}
+                      >
+                        <div className="admin-content-item-header">
+                          {isCompleted ? (
+                            <CheckCircle2 size={16} className="icon-complete" />
+                          ) : (
+                            <BookOpen size={16} />
+                          )}
+                          <span className="admin-content-item-title">{lesson.title}</span>
+                        </div>
+                        <div className="admin-content-item-meta">
+                          <span>Ch {lesson.chapterId}</span>
+                          <span>{lesson.duration}</span>
+                          <span className={analysis.wordCount < 200 ? 'warning' : ''}>{analysis.wordCount} words</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {filteredLessons.length === 0 && (
+                    <div className="admin-empty-state">
+                      <Search size={48} />
+                      <p>No lessons found</p>
                     </div>
                   )}
                 </div>
-              )}
+
+                {/* Lesson Detail */}
+                <div className="admin-lesson-detail-panel">
+                  {selectedLesson ? (
+                    <>
+                      <div className="admin-detail-header">
+                        <h2>{selectedLesson.title}</h2>
+                        <div className="admin-detail-actions">
+                          <button 
+                            className="icon-btn edit"
+                            onClick={() => handleEditLesson(selectedLesson, selectedLesson.chapterId)}
+                          >
+                            <Edit3 size={16} /> Edit
+                          </button>
+                          <button className="icon-btn" onClick={handleCopyContent}>
+                            <Copy size={16} /> Copy
+                          </button>
+                        </div>
+                      </div>
+                      <div className="admin-detail-meta">
+                        <span><strong>ID:</strong> {selectedLesson.id}</span>
+                        <span><strong>Duration:</strong> {selectedLesson.duration}</span>
+                        <span><strong>Words:</strong> {analyzeContent(selectedLesson.content).wordCount}</span>
+                        <span><strong>Code Blocks:</strong> {analyzeContent(selectedLesson.content).codeBlocks}</span>
+                      </div>
+                      <div className="admin-detail-content">
+                        {renderPreviewContent(selectedLesson.content)}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="admin-empty-state">
+                      <FileText size={48} />
+                      <p>Select a lesson to view details</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -719,172 +1912,248 @@ export default function AdminPanel({ courseData, isOpen, onClose }) {
             </div>
           )}
 
-          {/* Content Editor/Preview Tab */}
+          {/* Content Editor Tab */}
           {activeTab === 'editor' && (
             <div className="admin-editor">
               <div className="admin-section-title">
-                <FileText size={20} />
-                <span>Content Preview</span>
+                <Edit3 size={20} />
+                <span>{editingLesson ? 'Edit Lesson' : 'Content Editor'}</span>
               </div>
 
-              {/* Lesson Selector */}
-              <div className="admin-lesson-selector">
-                <select 
-                  value={selectedLesson?.id || ''} 
-                  onChange={(e) => {
-                    const lesson = courseData.chapters
-                      .flatMap(ch => ch.lessons)
-                      .find(l => l.id === e.target.value);
-                    setSelectedLesson(lesson);
-                  }}
-                >
-                  <option value="">Select a lesson...</option>
-                  {courseData.chapters.map(chapter => (
-                    <optgroup key={chapter.id} label={`Chapter ${chapter.id}: ${chapter.title}`}>
-                      {chapter.lessons.map(lesson => (
-                        <option key={lesson.id} value={lesson.id}>
-                          {lesson.title}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-
-              {selectedLesson && (
+              {editingLesson ? (
                 <>
-                  {/* View Toggle */}
-                  <div className="admin-view-toggle">
-                    <button 
-                      className={`toggle-btn ${!showRawContent ? 'active' : ''}`}
-                      onClick={() => setShowRawContent(false)}
-                    >
-                      <Eye size={16} />
-                      Rendered
-                    </button>
-                    <button 
-                      className={`toggle-btn ${showRawContent ? 'active' : ''}`}
-                      onClick={() => setShowRawContent(true)}
-                    >
-                      <Code size={16} />
-                      Raw
-                    </button>
-                    <button className="copy-btn" onClick={handleCopyContent}>
-                      <Copy size={16} />
-                      Copy
-                    </button>
+                  {/* Edit Mode Header */}
+                  <div className="editor-header">
+                    <div className="editor-form-row">
+                      <div className="form-group flex-1">
+                        <label>Title</label>
+                        <input
+                          type="text"
+                          value={lessonForm.title}
+                          onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
+                          className="form-input"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Duration</label>
+                        <input
+                          type="text"
+                          value={lessonForm.duration}
+                          onChange={(e) => setLessonForm({ ...lessonForm, duration: e.target.value })}
+                          className="form-input"
+                          style={{ width: '120px' }}
+                        />
+                      </div>
+                    </div>
+                    <div className="editor-actions">
+                      <button 
+                        className={`toggle-btn ${showLivePreview ? 'active' : ''}`}
+                        onClick={() => setShowLivePreview(!showLivePreview)}
+                      >
+                        {showLivePreview ? <EyeOff size={16} /> : <Eye size={16} />}
+                        {showLivePreview ? 'Hide Preview' : 'Live Preview'}
+                      </button>
+                      <button className="copy-btn" onClick={handleCopyContent}>
+                        <Copy size={16} /> Copy
+                      </button>
+                      <button 
+                        className="cancel-btn" 
+                        onClick={() => {
+                          setEditingLesson(null);
+                          setLessonForm({ id: '', title: '', duration: '', content: '', chapterId: '' });
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button className="save-btn" onClick={handleSaveLessonEdit}>
+                        <Save size={16} /> Save Changes
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Lesson Metadata */}
-                  <div className="admin-lesson-meta">
-                    <span><strong>ID:</strong> {selectedLesson.id}</span>
-                    <span><strong>Duration:</strong> {selectedLesson.duration}</span>
-                    <span><strong>Words:</strong> {analyzeContent(selectedLesson.content).wordCount}</span>
-                  </div>
-
-                  {/* Content Preview */}
-                  <div className="admin-preview-container">
-                    {showRawContent ? (
-                      <pre className="admin-raw-content">{selectedLesson.content}</pre>
-                    ) : (
-                      <div className="admin-rendered-content">
-                        <h1>{selectedLesson.title}</h1>
-                        {renderPreviewContent(selectedLesson.content)}
+                  {/* Editor Content */}
+                  <div className={`editor-container ${showLivePreview ? 'split' : ''}`}>
+                    <div className="editor-textarea-wrapper">
+                      <div className="editor-textarea-header">
+                        <Code size={16} /> Markdown Content
+                      </div>
+                      <textarea
+                        value={lessonForm.content}
+                        onChange={(e) => setLessonForm({ ...lessonForm, content: e.target.value })}
+                        className="editor-textarea"
+                        placeholder="Write your lesson content in markdown..."
+                      />
+                    </div>
+                    
+                    {showLivePreview && (
+                      <div className="editor-preview-wrapper">
+                        <div className="editor-preview-header">
+                          <Eye size={16} /> Live Preview
+                        </div>
+                        <div className="editor-preview">
+                          <h1>{lessonForm.title}</h1>
+                          {renderPreviewContent(lessonForm.content)}
+                        </div>
                       </div>
                     )}
                   </div>
                 </>
-              )}
+              ) : (
+                <>
+                  {/* Lesson Selector */}
+                  <div className="admin-lesson-selector">
+                    <select 
+                      value={selectedLesson?.id || ''} 
+                      onChange={(e) => {
+                        const lesson = courseData.chapters
+                          .flatMap(ch => ch.lessons.map(l => ({ ...l, chapterId: ch.id })))
+                          .find(l => l.id === e.target.value);
+                        setSelectedLesson(lesson);
+                      }}
+                    >
+                      <option value="">Select a lesson to edit...</option>
+                      {courseData.chapters.map(chapter => (
+                        <optgroup key={chapter.id} label={`Chapter ${chapter.id}: ${chapter.title}`}>
+                          {chapter.lessons.map(lesson => (
+                            <option key={lesson.id} value={lesson.id}>
+                              {lesson.title}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                    
+                    {selectedLesson && (
+                      <button 
+                        className="edit-selected-btn"
+                        onClick={() => handleEditLesson(selectedLesson, selectedLesson.chapterId)}
+                      >
+                        <Edit3 size={16} /> Edit This Lesson
+                      </button>
+                    )}
+                  </div>
 
-              {!selectedLesson && (
-                <div className="admin-empty-state">
-                  <FileText size={48} />
-                  <p>Select a lesson to preview its content</p>
-                </div>
+                  {selectedLesson ? (
+                    <>
+                      {/* View Toggle */}
+                      <div className="admin-view-toggle">
+                        <button 
+                          className={`toggle-btn ${!showRawContent ? 'active' : ''}`}
+                          onClick={() => setShowRawContent(false)}
+                        >
+                          <Eye size={16} />
+                          Rendered
+                        </button>
+                        <button 
+                          className={`toggle-btn ${showRawContent ? 'active' : ''}`}
+                          onClick={() => setShowRawContent(true)}
+                        >
+                          <Code size={16} />
+                          Raw
+                        </button>
+                        <button className="copy-btn" onClick={handleCopyContent}>
+                          <Copy size={16} />
+                          Copy
+                        </button>
+                      </div>
+
+                      {/* Lesson Metadata */}
+                      <div className="admin-lesson-meta">
+                        <span><strong>ID:</strong> {selectedLesson.id}</span>
+                        <span><strong>Duration:</strong> {selectedLesson.duration}</span>
+                        <span><strong>Words:</strong> {analyzeContent(selectedLesson.content).wordCount}</span>
+                      </div>
+
+                      {/* Content Preview */}
+                      <div className="admin-preview-container">
+                        {showRawContent ? (
+                          <pre className="admin-raw-content">{selectedLesson.content}</pre>
+                        ) : (
+                          <div className="admin-rendered-content">
+                            <h1>{selectedLesson.title}</h1>
+                            {renderPreviewContent(selectedLesson.content)}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="admin-empty-state">
+                      <FileText size={48} />
+                      <p>Select a lesson to preview or edit</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
 
-          {/* Course Structure Visualizer Tab */}
-          {activeTab === 'structure' && (
-            <div className="admin-structure">
+          {/* Trash Tab */}
+          {activeTab === 'trash' && (
+            <div className="admin-trash">
               <div className="admin-section-title">
-                <Map size={20} />
-                <span>Course Structure</span>
+                <Trash2 size={20} />
+                <span>Trash ({trash.chapters.length + trash.lessons.length} items)</span>
+                {(trash.chapters.length > 0 || trash.lessons.length > 0) && (
+                  <button className="empty-trash-btn" onClick={handleEmptyTrash}>
+                    Empty Trash
+                  </button>
+                )}
               </div>
 
-              <div className="admin-structure-legend">
-                <div className="legend-item">
-                  <div className="legend-color completed"></div>
-                  <span>Completed</span>
+              {trash.chapters.length === 0 && trash.lessons.length === 0 ? (
+                <div className="admin-empty-state">
+                  <Archive size={48} />
+                  <p>Trash is empty</p>
                 </div>
-                <div className="legend-item">
-                  <div className="legend-color incomplete"></div>
-                  <span>Not Started</span>
-                </div>
-                <div className="legend-item">
-                  <div className="legend-color warning"></div>
-                  <span>Short Content</span>
-                </div>
-              </div>
-
-              <div className="admin-structure-map">
-                {courseData.chapters.map((chapter, chapterIdx) => (
-                  <div key={chapter.id} className="admin-structure-chapter">
-                    <div className="admin-structure-chapter-node">
-                      <div className="chapter-badge">{chapter.id}</div>
-                      <div className="chapter-info">
-                        <span className="chapter-title">{chapter.title}</span>
-                        <span className="chapter-desc">{chapter.description}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="admin-structure-lessons">
-                      {chapter.lessons.map((lesson, lessonIdx) => {
-                        const isCompleted = completedLessons.includes(lesson.id);
-                        const isShort = analyzeContent(lesson.content).wordCount < 200;
-                        
-                        return (
-                          <div 
-                            key={lesson.id}
-                            className={`admin-structure-lesson-node ${isCompleted ? 'completed' : ''} ${isShort ? 'warning' : ''}`}
-                          >
-                            <div className="lesson-connector">
-                              <div className="connector-line"></div>
-                              <div className="connector-dot"></div>
-                            </div>
-                            <div className="lesson-card">
-                              <div className="lesson-status">
-                                {isCompleted ? (
-                                  <CheckCircle2 size={16} />
-                                ) : (
-                                  <div className="lesson-number">{lessonIdx + 1}</div>
-                                )}
-                              </div>
-                              <div className="lesson-info">
-                                <span className="lesson-title">{lesson.title}</span>
-                                <span className="lesson-duration">{lesson.duration}</span>
-                              </div>
+              ) : (
+                <>
+                  {/* Deleted Chapters */}
+                  {trash.chapters.length > 0 && (
+                    <div className="trash-section">
+                      <h4>Deleted Chapters</h4>
+                      {trash.chapters.map(chapter => (
+                        <div key={chapter.id} className="trash-item">
+                          <div className="trash-item-info">
+                            <FolderTree size={18} />
+                            <div>
+                              <span className="trash-item-title">Chapter {chapter.id}: {chapter.title}</span>
+                              <span className="trash-item-meta">
+                                {chapter.lessons?.length || 0} lessons • Deleted {new Date(chapter.deletedAt).toLocaleDateString()}
+                              </span>
                             </div>
                           </div>
-                        );
-                      })}
+                          <button className="restore-btn" onClick={() => handleRestoreChapter(chapter)}>
+                            <Undo2 size={16} /> Restore
+                          </button>
+                        </div>
+                      ))}
                     </div>
+                  )}
 
-                    {chapterIdx < courseData.chapters.length - 1 && (
-                      <div className="chapter-connector">
-                        <ChevronDown size={24} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {/* Finish Node */}
-                <div className="admin-structure-finish">
-                  <Award size={32} />
-                  <span>Course Complete!</span>
-                </div>
-              </div>
+                  {/* Deleted Lessons */}
+                  {trash.lessons.length > 0 && (
+                    <div className="trash-section">
+                      <h4>Deleted Lessons</h4>
+                      {trash.lessons.map(lesson => (
+                        <div key={lesson.id} className="trash-item">
+                          <div className="trash-item-info">
+                            <BookOpen size={18} />
+                            <div>
+                              <span className="trash-item-title">{lesson.title}</span>
+                              <span className="trash-item-meta">
+                                From Chapter {lesson.chapterId} • Deleted {new Date(lesson.deletedAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          <button className="restore-btn" onClick={() => handleRestoreLesson(lesson)}>
+                            <Undo2 size={16} /> Restore
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>
