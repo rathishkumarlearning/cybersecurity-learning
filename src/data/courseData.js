@@ -85,6 +85,65 @@ Every security decision balances these three goals.
 
 This course teaches you skills for defense and ethical hacking ONLY. Using these skills illegally can land you in serious trouble.
 
+### Defense in Depth
+
+Professional security uses **multiple layers** of protection:
+
+\`\`\`
+Layer 1: Physical Security    → Locks, badges, cameras
+Layer 2: Network Security     → Firewalls, IDS/IPS
+Layer 3: Endpoint Security    → Antivirus, patching
+Layer 4: Application Security → Input validation, auth
+Layer 5: Data Security        → Encryption, backups
+Layer 6: Human Security       → Training, awareness
+\`\`\`
+
+If one layer fails, the others still protect you. This is why we don't rely on just passwords or just firewalls — we use everything together.
+
+### Common Attack Categories
+
+\`\`\`
+PASSIVE ATTACKS (listening):
+├── Eavesdropping (sniffing network traffic)
+├── Traffic analysis (who's talking to whom)
+└── Keylogging (recording keystrokes)
+
+ACTIVE ATTACKS (interfering):
+├── Man-in-the-Middle (intercepting communications)
+├── Denial of Service (flooding with traffic)
+├── SQL Injection (attacking databases)
+├── Phishing (fake emails/websites)
+└── Ransomware (encrypting files for ransom)
+\`\`\`
+
+### Cybersecurity Career Paths
+
+\`\`\`
+Entry Level:
+  Security Analyst       → $60-90K
+  SOC Analyst            → $55-85K
+  IT Auditor             → $60-90K
+
+Mid Level:
+  Penetration Tester     → $80-130K
+  Security Engineer      → $90-140K
+  Incident Responder     → $85-130K
+
+Senior Level:
+  Security Architect     → $130-200K
+  CISO                   → $150-300K
+  Red Team Lead          → $120-180K
+\`\`\`
+
+### Key Certifications
+
+| Certification | Level | Focus |
+|--------------|-------|-------|
+| CompTIA Security+ | Entry | General security |
+| CEH | Intermediate | Ethical hacking |
+| OSCP | Advanced | Penetration testing |
+| CISSP | Senior | Security management |
+
 Ready to become a cyber defender? Let's go! 🚀
           `
         },
@@ -204,6 +263,76 @@ ip addr
 # See your public IP
 curl ifconfig.me
 \`\`\`
+
+### TCP vs UDP
+
+Two main protocols for sending data:
+
+\`\`\`
+TCP (Transmission Control Protocol):
+├── Reliable — guarantees delivery
+├── Ordered — packets arrive in sequence
+├── Handshake — connection established first
+├── Used for: Web, email, file transfers
+└── Analogy: Registered mail (tracked, confirmed)
+
+UDP (User Datagram Protocol):
+├── Fast — no handshake needed
+├── Unreliable — packets might get lost
+├── Unordered — packets may arrive out of order
+├── Used for: Gaming, video streaming, DNS
+└── Analogy: Throwing a paper airplane (fast, no guarantee)
+\`\`\`
+
+### The TCP Three-Way Handshake
+
+\`\`\`
+Client → SYN      → Server   "Hey, want to connect?"
+Client ← SYN-ACK ← Server   "Sure! Ready when you are."
+Client → ACK      → Server   "Great, let's go!"
+         [Connection established!]
+\`\`\`
+
+<tip>
+💡 A SYN Flood attack sends millions of SYN packets but never completes the handshake — overwhelming the server with half-open connections!
+</tip>
+
+### Traceroute — Follow the Path
+
+See every router your data passes through:
+
+\`\`\`bash
+# Windows
+tracert google.com
+
+# Mac/Linux  
+traceroute google.com
+
+# Example output:
+1  router.local (192.168.1.1)     1 ms
+2  isp-gateway (10.0.0.1)         8 ms
+3  backbone.net (72.14.232.1)    15 ms
+4  google.com (142.250.80.46)    20 ms
+\`\`\`
+
+Each "hop" is a router between you and the destination. More hops = more potential attack points!
+
+### ARP — Address Resolution Protocol
+
+ARP links IP addresses to physical MAC addresses on your local network:
+
+\`\`\`bash
+# See your ARP table:
+arp -a
+
+# Output:
+# 192.168.1.1   →  aa:bb:cc:dd:ee:ff  (your router)
+# 192.168.1.50  →  11:22:33:44:55:66  (another device)
+\`\`\`
+
+<warning>
+⚠️ ARP Spoofing is a common attack where a hacker sends fake ARP messages to redirect traffic through their machine!
+</warning>
 
 Understanding networking is the foundation of cybersecurity! 🎯
           `
@@ -339,6 +468,110 @@ Passphrases are:
 \`\`\`
 4 random words = 20+ characters = extremely secure
 "purple-elephant-dancing-tuesday"
+\`\`\`
+
+### Attack #5: Credential Stuffing
+
+Using stolen username/password pairs from data breaches on OTHER sites:
+
+\`\`\`
+Data breach: LinkedIn passwords leaked (2016)
+Hacker gets: john@email.com : MyPass123
+
+Tries the SAME credentials on:
+├── Gmail       → ✓ WORKS (same password!)
+├── Facebook    → ✓ WORKS
+├── Amazon      → ✓ WORKS
+└── Bank        → ✓ WORKS (catastrophic!)
+\`\`\`
+
+This is why you should NEVER reuse passwords!
+
+### Salting — The Defense Against Rainbow Tables
+
+\`\`\`
+WITHOUT SALT:
+"password123" → always produces the same hash
+Hacker pre-computes: hash → password (rainbow table)
+
+WITH SALT:
+"password123" + "x7kJ9m" → unique hash #1
+"password123" + "pQ3nR2" → completely different hash #2
+
+Same password, different salts = different hashes!
+Now rainbow tables are useless because every hash is unique.
+\`\`\`
+
+\`\`\`python
+# Proper password hashing with salt (bcrypt)
+import bcrypt
+
+password = b"MySecurePassword123"
+
+# Generate salt and hash
+salt = bcrypt.gensalt()
+hashed = bcrypt.hashpw(password, salt)
+print(f"Salt: {salt}")
+print(f"Hash: {hashed}")
+
+# Verify a password
+if bcrypt.checkpw(password, hashed):
+    print("Password matches!")
+\`\`\`
+
+### Check If You've Been Breached
+
+\`\`\`
+Go to: haveibeenpwned.com
+Enter your email address
+See which data breaches include your info!
+
+If you're in a breach:
+1. Change that password IMMEDIATELY
+2. Change it on any other site where you used it
+3. Enable 2FA on the breached account
+4. Monitor for suspicious activity
+\`\`\`
+
+<warning>
+⚠️ The average person's email appears in 2-3 data breaches. Check yours now!
+</warning>
+
+### Password Strength Calculator
+
+\`\`\`python
+import math
+import string
+
+def calculate_strength(password):
+    """Calculate password entropy in bits."""
+    charset_size = 0
+    if any(c in string.ascii_lowercase for c in password):
+        charset_size += 26
+    if any(c in string.ascii_uppercase for c in password):
+        charset_size += 26
+    if any(c in string.digits for c in password):
+        charset_size += 10
+    if any(c in string.punctuation for c in password):
+        charset_size += 32
+    
+    entropy = len(password) * math.log2(charset_size)
+    
+    if entropy < 28:
+        strength = "VERY WEAK"
+    elif entropy < 36:
+        strength = "WEAK"
+    elif entropy < 60:
+        strength = "MODERATE"
+    elif entropy < 80:
+        strength = "STRONG"
+    else:
+        strength = "VERY STRONG"
+    
+    return entropy, strength
+
+bits, rating = calculate_strength("P@ssw0rd123!")
+print(f"Entropy: {bits:.0f} bits — {rating}")
 \`\`\`
 
 You now understand how hackers crack passwords! 🎓
@@ -580,6 +813,118 @@ They use this to:
 - Impersonate your friends
 \`\`\`
 
+### Checking Links Safely
+
+\`\`\`
+BEFORE CLICKING any link:
+
+1. HOVER over it to see the real URL
+   Display: "Click to verify your account"
+   Real URL: http://faceb00k-verify.suspicious.com
+                     ^^^^^^ NOT facebook.com!
+
+2. Check the domain carefully:
+   ✅ facebook.com
+   ✅ login.facebook.com (subdomain of facebook.com)
+   ❌ facebook.suspicious.com (subdomain of suspicious.com!)
+   ❌ facebo0k.com (zero instead of 'o')
+   ❌ facebook-login.com (totally different domain)
+
+3. Use VirusTotal to scan suspicious links:
+   virustotal.com — paste the URL, it scans with 70+ antivirus engines
+\`\`\`
+
+### URL Anatomy for Security
+
+\`\`\`
+https://www.example.com:443/path/page?query=value#section
+  │       │     │        │    │    │       │         │
+  │       │     │        │    │    │       │         └── Fragment
+  │       │     │        │    │    │       └── Query string
+  │       │     │        │    │    └── Page
+  │       │     │        │    └── Path
+  │       │     │        └── Port (443 = HTTPS default)
+  │       │     └── Domain (THIS IS WHAT MATTERS!)
+  │       └── Subdomain
+  └── Protocol (https = secure)
+
+RULE: Always check the DOMAIN, not the subdomain or path.
+paypal.com/login       → Real PayPal ✅
+login.paypal.com       → Real PayPal ✅
+paypal.login.evil.com  → NOT PayPal! ❌ (domain is evil.com)
+\`\`\`
+
+### Email Header Analysis
+
+\`\`\`
+Most email clients let you view full headers:
+Gmail: Open email → ⋮ → "Show original"
+
+KEY HEADERS TO CHECK:
+From: security@paypal.com        → Displayed sender (EASILY FAKED!)
+Return-Path: attacker@evil.com   → Actual return address
+Received: from mail.evil.com     → Actual sending server
+SPF: FAIL                        → Sender not authorized!
+DKIM: FAIL                       → Signature doesn't match!
+
+If SPF or DKIM fail → likely phishing!
+\`\`\`
+
+\`\`\`python
+# Python script to check if a domain has SPF/DKIM
+import dns.resolver
+
+def check_email_security(domain):
+    """Check if a domain has email security records."""
+    try:
+        # Check SPF record
+        spf = dns.resolver.resolve(domain, 'TXT')
+        for record in spf:
+            if 'spf' in str(record).lower():
+                print(f"SPF found: {record}")
+    except:
+        print("No SPF record found! ⚠️")
+    
+    try:
+        # Check DMARC record
+        dmarc = dns.resolver.resolve(f'_dmarc.{domain}', 'TXT')
+        for record in dmarc:
+            print(f"DMARC found: {record}")
+    except:
+        print("No DMARC record found! ⚠️")
+
+check_email_security("google.com")
+\`\`\`
+
+### Phishing Simulation Exercise
+
+\`\`\`
+Can you spot which emails are phishing? (Answers below)
+
+EMAIL 1:
+From: support@amazon.com
+Subject: Your order #302-4857123 has shipped
+"Hi John, your order will arrive Tuesday."
+[Track Package]
+
+EMAIL 2:
+From: security@amaz0n-verify.com
+Subject: URGENT: Verify your account NOW!
+"Dear Customer, click below or lose access in 24h!"
+[Verify Identity]
+
+EMAIL 3:
+From: hr@company.com
+Subject: Updated PTO Policy
+"Please review the new PTO policy document attached."
+[Open PDF]
+
+ANSWERS:
+Email 1: ✅ Likely legitimate (uses your name, real domain)
+Email 2: 🚩 PHISHING (fake domain, urgency, generic greeting)
+Email 3: ⚠️ Could be either! Verify with HR directly.
+\`\`\`
+
 Stay skeptical! If something feels off, it probably is. 🎯
           `
         },
@@ -718,6 +1063,66 @@ Next time you get a suspicious email or message:
 1. Identify which principle(s) of influence it uses
 2. Find the red flags
 3. Think about what the attacker wants
+
+Practice makes you harder to hack! 🛡️
+
+### Deepfakes & AI Social Engineering
+
+\`\`\`
+NEW THREAT: AI-powered social engineering
+
+Voice Cloning:
+  - 3 seconds of audio → convincing voice clone
+  - "Hi, this is your boss. Transfer $50,000 to..."
+  - Happened to a UK energy company ($243,000 stolen!)
+
+Video Deepfakes:
+  - Realistic fake video calls
+  - CEO "appears" on Zoom asking for action
+  - Hard to detect in real-time
+
+AI-Written Phishing:
+  - ChatGPT writes perfect English (no more grammar errors!)
+  - Personalized at scale
+  - Nearly impossible to spot by language alone
+
+DEFENSE:
+  ├── Verify voice/video requests through another channel
+  ├── Use code words for sensitive operations
+  ├── Be skeptical of urgent requests (even from "bosses")
+  ├── Call back on a KNOWN number (not one provided)
+  └── Multi-person approval for financial transfers
+\`\`\`
+
+### Physical Security Awareness
+
+\`\`\`
+PHYSICAL ATTACKS (often overlooked!):
+
+Shoulder Surfing:
+  Watching someone type their password
+  Defense: Screen privacy filters, awareness
+
+Dumpster Diving:
+  Going through trash for sensitive documents
+  Defense: Shred everything with sensitive info
+
+Tailgating:
+  Following authorized person through secure door
+  Defense: Always verify, never hold door for strangers
+
+Evil Maid Attack:
+  Physical access to unattended laptop
+  Defense: Full disk encryption, lock screen, never leave unattended
+
+USB Drop Attack:
+  "Found" USB drives with malware
+  Defense: NEVER plug in unknown USB devices
+\`\`\`
+
+<warning>
+⚠️ Physical security is the most overlooked attack vector. The fanciest firewall can't stop someone who walks through the front door!
+</warning>
 
 Practice makes you harder to hack! 🛡️
           `
@@ -862,6 +1267,65 @@ Hashing:    Plaintext  →  Hash      (one-way only!)
 
 Hashing is used for passwords — the website never needs to get your password back, just check if it matches!
 
+### Common Encryption Algorithms
+
+\`\`\`
+SYMMETRIC (same key encrypts/decrypts):
+├── AES-256    → Gold standard, used everywhere
+├── AES-128    → Slightly faster, still very secure
+├── ChaCha20   → Fast on mobile, used by Google
+└── (OLD) DES  → BROKEN, never use!
+
+ASYMMETRIC (public/private key pair):
+├── RSA-2048   → Most common, proven secure
+├── RSA-4096   → Extra security, slower
+├── Ed25519    → Modern, fast, smaller keys
+└── ECDSA      → Used in Bitcoin, TLS
+
+HASHING (one-way, for verification):
+├── SHA-256    → Standard, used in Bitcoin
+├── SHA-3      → Newest standard
+├── bcrypt     → For passwords (slow = good!)
+├── Argon2     → Best for passwords
+└── (OLD) MD5  → BROKEN, never use for security!
+\`\`\`
+
+<warning>
+⚠️ Never use MD5 or SHA-1 for security purposes — they have known collision vulnerabilities. Always use SHA-256 or better!
+</warning>
+
+### Digital Signatures
+
+How do you know a message REALLY came from who it claims?
+
+\`\`\`
+SIGNING (sender):
+Message → Hash → Encrypt hash with PRIVATE key → Signature
+
+VERIFYING (receiver):
+1. Decrypt signature with sender's PUBLIC key → Original hash
+2. Hash the received message → New hash
+3. Compare: Original hash == New hash?
+   YES → Message is authentic and unmodified ✓
+   NO  → Message was tampered with ✗
+\`\`\`
+
+\`\`\`python
+# Conceptual digital signature
+from hashlib import sha256
+
+# Sender signs
+message = "Send $100 to Alice"
+message_hash = sha256(message.encode()).hexdigest()
+signature = encrypt_with_private_key(message_hash)  # Only sender can do this
+
+# Receiver verifies
+received_hash = decrypt_with_public_key(signature)  # Anyone can verify
+computed_hash = sha256(message.encode()).hexdigest()
+is_authentic = received_hash == computed_hash
+print(f"Message authentic: {is_authentic}")
+\`\`\`
+
 Understanding encryption is understanding the backbone of internet security! 🔐
           `
         },
@@ -984,6 +1448,56 @@ You → [Encrypted Tunnel] → VPN Server → Internet
 
 <tip>
 💡 Free VPNs often sell your data. If you're not paying, YOU are the product!
+</tip>
+
+### Wi-Fi Security Standards
+
+\`\`\`
+WEP (1999)  → BROKEN! Can be cracked in minutes
+WPA (2003)  → BROKEN! Known vulnerabilities
+WPA2 (2004) → Good, but KRACK attack found in 2017
+WPA3 (2018) → Current best standard ✓
+
+ALWAYS use WPA2 or WPA3 for your home Wi-Fi!
+\`\`\`
+
+### Public Wi-Fi Dangers
+
+\`\`\`
+RISKS of public Wi-Fi (coffee shops, airports):
+├── Evil Twin Attack (fake hotspot with same name)
+├── Packet Sniffing (reading unencrypted traffic)
+├── Man-in-the-Middle (intercepting connections)
+└── Session Hijacking (stealing login cookies)
+
+PROTECTION:
+├── Use HTTPS sites only
+├── Use a VPN
+├── Don't access banking/sensitive accounts
+├── Turn off auto-connect to Wi-Fi networks
+└── Forget the network when done
+\`\`\`
+
+### Tor — Anonymous Browsing
+
+\`\`\`
+How Tor works (The Onion Router):
+
+Your traffic is encrypted in 3 layers:
+You → Guard Node → Middle Node → Exit Node → Website
+
+Each node only knows the previous and next hop:
+Guard:  Knows YOU, but not the website
+Middle: Knows nothing useful
+Exit:   Knows the website, but not YOU
+
+Like wrapping a letter in 3 envelopes:
+Each relay opens one envelope, sees the next address,
+but never the original sender AND the content together.
+\`\`\`
+
+<tip>
+💡 Tor provides anonymity but is SLOW. Use it when privacy matters most, not for everyday browsing.
 </tip>
 
 Now you understand how encryption protects your data online! 🛡️
@@ -1276,6 +1790,103 @@ Layer 6: Backups (recovery plan)
 \`\`\`
 
 Multiple layers = much harder to hack! 🏰
+
+### Honeypots — Trap the Attackers!
+
+\`\`\`
+A honeypot is a FAKE system designed to:
+1. Detect attackers (early warning)
+2. Distract from real systems
+3. Study attacker techniques
+4. Waste attacker time
+
+Types:
+├── Low-interaction: Simulates services (easy to set up)
+├── Medium-interaction: Emulates OS/services 
+└── High-interaction: Real systems (most realistic)
+
+Example tools:
+├── Cowrie (SSH/Telnet honeypot)
+├── Dionaea (malware collection)
+└── HoneyDB (web-based honeypot)
+\`\`\`
+
+\`\`\`bash
+# Simple SSH honeypot with Cowrie
+# Install Cowrie
+git clone https://github.com/cowrie/cowrie.git
+cd cowrie
+pip install -r requirements.txt
+
+# When hackers try to SSH in, Cowrie:
+# - Records all commands they type
+# - Captures any malware they upload
+# - Logs their IP and techniques
+# - Gives them a fake filesystem to explore
+
+# All while your REAL server stays safe!
+\`\`\`
+
+### Log Analysis — Finding Intrusions
+
+\`\`\`bash
+# Real security work: analyzing log files
+
+# Find failed SSH login attempts
+grep "Failed password" /var/log/auth.log | tail -20
+
+# Count failed logins per IP (find brute-force attacks)
+grep "Failed password" /var/log/auth.log | \
+  awk '{print $11}' | sort | uniq -c | sort -rn | head
+
+# Output:
+# 847 192.168.1.55    ← This IP tried 847 times! Block it!
+#  23 10.0.0.42
+#   3 192.168.1.100
+
+# Find successful logins (verify they're legitimate)
+grep "Accepted" /var/log/auth.log
+
+# Web server: find 404 errors (directory enumeration)
+grep "404" /var/log/apache2/access.log | \
+  awk '{print $7}' | sort | uniq -c | sort -rn | head
+
+# Output:
+# 156 /admin          ← Someone looking for admin pages
+#  89 /wp-login.php   ← WordPress attack
+#  45 /.env           ← Trying to steal config files
+\`\`\`
+
+<tip>
+💡 Security Information and Event Management (SIEM) tools like Splunk, ELK Stack, and Wazuh automate log analysis at enterprise scale. They're essential for Security Operations Centers (SOCs).
+</tip>
+
+### Zero Trust Security Model
+
+\`\`\`
+OLD MODEL (Castle and Moat):
+  "Trust everything inside the network"
+  Problem: Once inside, attackers move freely
+
+NEW MODEL (Zero Trust):
+  "Never trust, always verify"
+  
+  Principles:
+  ├── Verify every user, every time
+  ├── Verify every device, every time
+  ├── Limit access to minimum needed
+  ├── Monitor everything continuously
+  └── Assume breach has already happened
+
+  Implementation:
+  ├── Multi-factor authentication everywhere
+  ├── Micro-segmentation of networks
+  ├── Continuous monitoring and logging
+  ├── Least-privilege access policies
+  └── Encrypt all traffic (even internal!)
+\`\`\`
+
+Multiple layers = much harder to hack! 🏰
           `
         }
       ]
@@ -1428,6 +2039,114 @@ Safe practice environments:
 - **PortSwigger Web Security Academy** (free!)
 
 These are LEGAL practice environments designed to be hacked! 🎯
+
+### Secure Coding Principles
+
+\`\`\`python
+# PRINCIPLE 1: Never trust user input!
+# Validate, sanitize, escape ALL input
+
+# BAD:
+user_input = request.args.get('name')
+return f"Hello, {user_input}"  # XSS vulnerable!
+
+# GOOD:
+from markupsafe import escape
+user_input = request.args.get('name')
+return f"Hello, {escape(user_input)}"  # Safe!
+
+
+# PRINCIPLE 2: Least privilege
+# Give minimum permissions needed
+
+# BAD: Running web server as root
+# GOOD: Running as www-data user with limited access
+
+
+# PRINCIPLE 3: Defense in depth
+# Don't rely on just one security measure
+
+# Layer 1: Input validation (client-side)
+# Layer 2: Input validation (server-side)  
+# Layer 3: Parameterized queries (database)
+# Layer 4: Output encoding (display)
+# Layer 5: Content Security Policy (browser)
+
+
+# PRINCIPLE 4: Fail securely
+# When something goes wrong, don't expose details
+
+# BAD:
+try:
+    user = database.get_user(id)
+except Exception as e:
+    return f"Error: {e}"  # Exposes database details!
+
+# GOOD:
+try:
+    user = database.get_user(id)
+except Exception as e:
+    log.error(f"Database error: {e}")  # Log internally
+    return "An error occurred. Please try again."  # Generic message
+\`\`\`
+
+### HTTP Security Headers
+
+\`\`\`
+Essential security headers for your web server:
+
+Content-Security-Policy: default-src 'self'
+  → Prevents XSS by restricting script sources
+
+X-Content-Type-Options: nosniff
+  → Prevents MIME type sniffing attacks
+
+X-Frame-Options: DENY
+  → Prevents clickjacking (embedding in iframes)
+
+Strict-Transport-Security: max-age=31536000
+  → Forces HTTPS for one year
+
+X-XSS-Protection: 1; mode=block
+  → Browser's built-in XSS filter
+
+Referrer-Policy: strict-origin-when-cross-origin
+  → Controls what URL info is sent to other sites
+\`\`\`
+
+\`\`\`python
+# Adding security headers in Flask/Python
+@app.after_request
+def add_security_headers(response):
+    response.headers['Content-Security-Policy'] = "default-src 'self'"
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000'
+    return response
+\`\`\`
+
+### File Upload Vulnerabilities
+
+\`\`\`
+ATTACK: Uploading a PHP shell disguised as an image
+
+1. Hacker creates evil.php.jpg
+2. Website only checks file extension (.jpg = allowed!)
+3. Server executes the PHP code
+4. Hacker has remote code execution! 😱
+
+DEFENSES:
+✅ Check MIME type (not just extension)
+✅ Rename uploaded files
+✅ Store outside web root
+✅ Limit file types and sizes
+✅ Scan for malware
+✅ Don't execute uploaded files
+\`\`\`
+
+<warning>
+⚠️ File upload is one of the most dangerous web features. If not properly secured, it can lead to complete server compromise!
+</warning>
           `
         },
         {
@@ -1566,6 +2285,91 @@ Rate yourself:
 7-9: 🟢 Great security!
 4-6: 🟡 Getting there
 0-3: 🔴 You're at risk!
+\`\`\`
+
+### Ransomware — The Modern Plague
+
+\`\`\`
+How ransomware works:
+1. You click a malicious link/attachment
+2. Malware encrypts ALL your files
+3. You see a ransom note:
+   "Pay $5,000 in Bitcoin or lose your files forever!"
+4. You either pay (no guarantee they'll decrypt)
+   or restore from backup
+
+PREVENTION:
+├── Don't open suspicious attachments
+├── Keep software updated (patches vulnerabilities)
+├── Use antivirus with real-time protection
+├── MAINTAIN BACKUPS (the ultimate defense!)
+└── Use email filtering for malicious attachments
+
+FAMOUS RANSOMWARE:
+├── WannaCry (2017) — Hit 200K+ computers worldwide
+├── NotPetya (2017) — $10B in damages globally
+├── Colonial Pipeline (2021) — Shut down US fuel supply
+└── REvil (2021) — $70M ransom demand from Kaseya
+\`\`\`
+
+<warning>
+⚠️ Paying the ransom funds criminal operations and doesn't guarantee file recovery. The FBI recommends NOT paying. Always maintain backups instead!
+</warning>
+
+### Privacy Tools
+
+\`\`\`
+BROWSER:
+├── Firefox (privacy-focused settings)
+├── Brave (built-in ad/tracker blocking)
+└── Tor Browser (maximum anonymity)
+
+SEARCH ENGINE:
+├── DuckDuckGo (doesn't track searches)
+└── Startpage (Google results, no tracking)
+
+EMAIL:
+├── ProtonMail (end-to-end encrypted)
+└── Tutanota (encrypted, open-source)
+
+MESSAGING:
+├── Signal (gold standard for private messaging)
+└── Wire (encrypted team communication)
+
+DNS:
+├── 1.1.1.1 (Cloudflare — fast, private)
+└── 9.9.9.9 (Quad9 — blocks malicious domains)
+\`\`\`
+
+### Incident Response Plan
+
+\`\`\`
+IF YOU SUSPECT A BREACH:
+
+STEP 1: CONTAIN
+  ├── Disconnect from network
+  ├── Don't turn off the computer (preserve evidence!)
+  └── Change passwords from a different device
+
+STEP 2: IDENTIFY
+  ├── What was accessed?
+  ├── How did they get in?
+  └── When did it start?
+
+STEP 3: ERADICATE
+  ├── Remove malware
+  ├── Close the vulnerability
+  └── Reset all affected credentials
+
+STEP 4: RECOVER
+  ├── Restore from clean backups
+  ├── Verify everything works
+  └── Monitor for re-compromise
+
+STEP 5: LEARN
+  ├── Document what happened
+  ├── Update security measures
+  └── Train to prevent recurrence
 \`\`\`
 
 Security is a journey, not a destination! 🛡️
@@ -1737,6 +2541,111 @@ Intermediate:
 Advanced:
   CISSP
   OSCE
+\`\`\`
+
+### The Penetration Testing Methodology
+
+\`\`\`
+A professional penetration test follows these phases:
+
+Phase 1: RECONNAISSANCE
+├── Passive (OSINT — no touching the target)
+│   ├── Google dorking
+│   ├── Social media research
+│   ├── WHOIS lookups
+│   └── Shodan searches
+│
+└── Active (touching the target)
+    ├── Port scanning (nmap)
+    ├── Service enumeration
+    └── DNS zone transfers
+
+Phase 2: SCANNING & ENUMERATION
+├── Vulnerability scanning (Nessus, OpenVAS)
+├── Web directory bruteforcing (gobuster, dirb)
+├── Service version detection
+└── Banner grabbing
+
+Phase 3: EXPLOITATION
+├── Attempt known vulnerabilities
+├── Test weak credentials
+├── Try SQL injection, XSS, etc.
+└── Social engineering (if in scope)
+
+Phase 4: POST-EXPLOITATION
+├── Privilege escalation
+├── Lateral movement
+├── Data access assessment
+└── Persistence demonstration
+
+Phase 5: REPORTING
+├── Executive summary
+├── Technical findings
+├── Risk ratings (Critical/High/Medium/Low)
+├── Remediation recommendations
+└── Proof of concept evidence
+\`\`\`
+
+### Linux Command Line Essentials
+
+\`\`\`bash
+# Essential Linux commands for cybersecurity:
+
+# File operations
+ls -la          # List files (including hidden)
+cat file.txt    # Display file contents
+grep "password" file.txt  # Search for text
+find / -name "*.conf"     # Find config files
+
+# Network commands
+ifconfig        # Network interfaces
+netstat -tulpn  # Open ports and connections
+curl -I site.com  # HTTP headers
+wget file.url   # Download files
+
+# Process management
+ps aux          # All running processes
+kill -9 PID     # Force kill a process
+top             # Real-time process monitor
+
+# Permissions
+chmod 600 key   # Set file permissions
+chown user file # Change ownership
+sudo command    # Run as root
+
+# Text processing
+cat file | grep "error"  # Filter lines
+sort file.txt | uniq     # Remove duplicates
+wc -l file.txt           # Count lines
+\`\`\`
+
+<tip>
+💡 Get comfortable with the Linux terminal — nearly all cybersecurity tools run from the command line. Practice daily!
+</tip>
+
+### Bug Bounty Programs
+
+Get PAID to find security vulnerabilities:
+
+\`\`\`
+PLATFORM        COMPANIES            TYPICAL BOUNTIES
+HackerOne       Many Fortune 500     $100 - $100,000+
+Bugcrowd        Major tech companies $50 - $50,000+
+Synack          Government, finance  Invite-only
+Direct programs Google, Apple, Meta  Up to $1,000,000!
+
+TOP BUG BOUNTY PAYOUTS:
+├── Apple: $100,000 for kernel exploits
+├── Google: Up to $250,000 for Android exploits
+├── Microsoft: Up to $250,000 for Hyper-V
+└── Facebook: $30,000+ for account takeover bugs
+
+Getting started:
+1. Learn web hacking thoroughly
+2. Start on HackerOne (beginner programs)
+3. Read disclosed reports (learn from others)
+4. Focus on one vulnerability type first
+5. Be patient — it takes time!
 \`\`\`
 
 You now know the tools of the trade! Use them wisely! 🛡️
@@ -1926,13 +2835,165 @@ inurl:admin login                → Admin pages
 💡 The cybersecurity community is incredibly helpful. Join Discord servers, Reddit's r/netsec, and ask questions!
 </tip>
 
+### Cryptography Challenge Walkthrough
+
+\`\`\`python
+# CHALLENGE: Decode this message
+# "Gur cnffjbeq vf syntvfsha"
+# Hint: ROT13
+
+import codecs
+
+encoded = "Gur cnffjbeq vf syntvfsha"
+decoded = codecs.decode(encoded, 'rot_13')
+print(decoded)  # "The password is flagisfun"
+
+# ROT13 shifts each letter by 13 positions
+# A→N, B→O, C→P, etc.
+# Applying ROT13 twice gives you the original text!
+\`\`\`
+
+### Steganography Challenge
+
+\`\`\`bash
+# CHALLENGE: Find the hidden message in an image
+# Steganography = hiding data inside other files
+
+# Check for hidden strings in an image
+strings suspicious_image.png | grep "flag"
+
+# Use steghide to extract hidden data
+steghide extract -sf image.jpg -p password
+
+# Use binwalk to check for embedded files
+binwalk -e mystery_file.png
+
+# Check EXIF metadata
+exiftool image.jpg | grep -i "comment"
+\`\`\`
+
+### Forensics Challenge
+
+\`\`\`bash
+# CHALLENGE: Analyze a network capture
+# Open the .pcap file in Wireshark
+
+# Filter for HTTP traffic
+# Display Filter: http
+
+# Find passwords transmitted in plain text
+# Display Filter: http.request.method == "POST"
+
+# Export HTTP objects (files transferred)
+# File → Export Objects → HTTP
+
+# Look for suspicious DNS queries
+# Display Filter: dns
+
+# Find base64-encoded data
+echo "ZmxhZ3toZWxsb193b3JsZH0=" | base64 -d
+# Output: flag{hello_world}
+\`\`\`
+
+### Binary / Reverse Engineering Challenge
+
+\`\`\`bash
+# CHALLENGE: Find the password in a compiled program
+
+# Check for readable strings
+strings mystery_program | grep -i "pass"
+
+# Run in a debugger
+gdb ./mystery_program
+(gdb) break main
+(gdb) run
+(gdb) next    # Step through code
+(gdb) info registers  # Check register values
+
+# Disassemble to see assembly code
+objdump -d mystery_program | less
+
+# Use ltrace to see library calls
+ltrace ./mystery_program
+# Output might show: strcmp("your_input", "s3cr3t_p@ss")
+\`\`\`
+
+### CTF Tips & Strategies
+
+\`\`\`
+BEGINNER STRATEGIES:
+━━━━━━━━━━━━━━━━━━━
+1. Always check the page source (Ctrl+U)
+2. Look at HTTP headers (browser dev tools)
+3. Try common passwords before brute-forcing
+4. Google the error messages you find
+5. Check for robots.txt and .git directories
+6. Base64 decode everything that looks encoded
+7. Comments in HTML/code often contain hints
+
+INTERMEDIATE STRATEGIES:
+━━━━━━━━━━━━━━━━━━━━━━━
+1. Automate with Python scripts
+2. Use CyberChef (online decoder) for encoding chains
+3. Look for backup files (.bak, .old, ~)
+4. Test all input fields for injection
+5. Enumerate users, directories, parameters
+6. Chain multiple small vulnerabilities together
+
+TEAM STRATEGIES:
+━━━━━━━━━━━━━━━━━
+1. Divide by category specialization
+2. Share findings in a shared document
+3. Don't all work on the same challenge
+4. Get the easy points first (low-hanging fruit)
+5. Take breaks — fresh eyes find flags
+\`\`\`
+
+<tip>
+💡 The cybersecurity community is incredibly helpful. Join Discord servers, Reddit's r/netsec and r/hacking, and ask questions. Everyone started as a beginner!
+</tip>
+
+### Your Learning Roadmap
+
+\`\`\`
+MONTH 1: FOUNDATIONS
+□ Complete TryHackMe "Complete Beginner" path
+□ Set up a home lab (VirtualBox + Kali)
+□ Practice Linux commands daily
+□ Solve 10 beginner CTF challenges
+
+MONTH 2: WEB SECURITY
+□ Complete PortSwigger Web Security Academy
+□ Practice SQL injection on DVWA
+□ Learn Burp Suite thoroughly
+□ Solve 20 web CTF challenges
+
+MONTH 3: NETWORK SECURITY
+□ Master Nmap and Wireshark
+□ Complete TryHackMe network rooms
+□ Practice with Metasploit
+□ Start on HackTheBox easy machines
+
+MONTH 4-6: SPECIALIZATION
+□ Choose a focus area:
+  - Web application security
+  - Network penetration testing
+  - Reverse engineering
+  - Forensics & incident response
+□ Start working toward CompTIA Security+
+□ Enter your first live CTF competition!
+\`\`\`
+
 Congratulations! You've completed the Cybersecurity course! 🎉
 
 You now have the foundation to:
-- Protect yourself online
-- Understand how attacks work
-- Use security tools ethically
-- Start your cybersecurity journey
+- **Protect yourself** and your family online
+- **Understand attacks** from the attacker's perspective
+- **Use security tools** ethically and responsibly
+- **Start a career** in one of the highest-demand tech fields
+- **Compete in CTFs** and test your skills against others
+
+**Remember:** The ethical hacking community has a golden rule — **never hack what you don't have permission to hack.** Use your powers for good, and the cybersecurity world will welcome you with open arms.
 
 Stay curious, stay ethical, and keep learning! 🛡️🚀
           `
