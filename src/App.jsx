@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { courseData } from './data/courseData';
+import AdminPanel from './components/AdminPanel';
 import {
   Menu, X, ChevronRight, BookOpen, Clock, CheckCircle2,
-  Lightbulb, AlertTriangle, Play, Home, Shield, ImageIcon
+  Lightbulb, AlertTriangle, Play, Home, Shield, ImageIcon, Settings
 } from 'lucide-react';
 import './index.css';
 
@@ -22,11 +23,43 @@ function App() {
   const [currentView, setCurrentView] = useState('home');
   const [currentLesson, setCurrentLesson] = useState(null);
   const [completedLessons, setCompletedLessons] = useState([]);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [logoClickCount, setLogoClickCount] = useState(0);
+  const logoClickTimer = useRef(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('cybersecurity-progress');
     if (saved) setCompletedLessons(JSON.parse(saved));
+    
+    // Check for admin route
+    if (window.location.hash === '#admin') {
+      setShowAdmin(true);
+    }
   }, []);
+
+  // Track last accessed timestamp
+  useEffect(() => {
+    localStorage.setItem('cybersecurity-last-accessed', Date.now().toString());
+  }, [currentView, currentLesson]);
+
+  // Handle logo clicks for secret admin access
+  const handleLogoClick = () => {
+    setLogoClickCount(prev => prev + 1);
+    
+    // Reset counter after 2 seconds of no clicks
+    if (logoClickTimer.current) {
+      clearTimeout(logoClickTimer.current);
+    }
+    logoClickTimer.current = setTimeout(() => {
+      setLogoClickCount(0);
+    }, 2000);
+
+    // Open admin after 5 clicks
+    if (logoClickCount >= 4) {
+      setShowAdmin(true);
+      setLogoClickCount(0);
+    }
+  };
 
   const saveProgress = (lessonId) => {
     const updated = [...completedLessons, lessonId];
@@ -222,7 +255,7 @@ function App() {
       <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} />
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
+        <div className="sidebar-header" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
           <div className="sidebar-logo"><Shield size={24} /></div>
           <span className="sidebar-title">Cybersecurity</span>
         </div>
@@ -372,6 +405,25 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Hidden Admin Trigger Button */}
+      <button 
+        className="admin-trigger" 
+        onClick={() => setShowAdmin(true)}
+        title="Admin Panel"
+      >
+        <Settings size={24} />
+      </button>
+
+      {/* Admin Panel */}
+      <AdminPanel 
+        courseData={courseData}
+        isOpen={showAdmin}
+        onClose={() => {
+          setShowAdmin(false);
+          window.location.hash = '';
+        }}
+      />
     </div>
   );
 }
